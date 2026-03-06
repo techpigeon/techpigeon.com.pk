@@ -1,54 +1,60 @@
-const router = require('express').Router();
-const { pool } = require('../config/db');
-const { authenticate } = require('../middleware/auth');
+const express = require('express');
+const router = express.Router();
+const { pool } = require('../db');
+const { authenticate, requireRole } = require('../middleware/auth');
 
-// GET all active plans (public)
+// GET all hosting plans (public)
 router.get('/plans', async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM hosting_plans WHERE is_active=true ORDER BY sort_order');
+    const { rows } = await pool.query('SELECT * FROM hosting_plans WHERE is_active = true ORDER BY sort_order');
     res.json({ plans: rows });
   } catch (e) { next(e); }
 });
 
-// GET user subscriptions
+// GET user's subscriptions
 router.get('/subscriptions', authenticate, async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      `SELECT hs.*, hp.name plan_name, hp.slug, hp.disk_gb, hp.bandwidth_gb, d.full_domain
+      `SELECT hs.*, hp.name AS plan_name, hp.disk_gb, hp.bandwidth_gb, d.full_domain
        FROM hosting_subscriptions hs
        JOIN hosting_plans hp ON hs.plan_id = hp.id
        LEFT JOIN domains d ON hs.domain_id = d.id
-       WHERE hs.user_id = $1 ORDER BY hs.created_at DESC`, [req.user.id]);
+       WHERE hs.user_id = $1 ORDER BY hs.created_at DESC`,
+      [req.user.id]
+    );
     res.json({ subscriptions: rows });
   } catch (e) { next(e); }
 });
 
-// POST subscribe to a plan
+// POST subscribe to a plan (creates order)
 router.post('/subscribe', authenticate, async (req, res, next) => {
   try {
-    const { plan_id, billing_cycle = 'monthly', domain_id } = req.body;
-    if (!plan_id) return res.status(400).json({ error: 'plan_id is required.' });
-    const plan = await pool.query('SELECT * FROM hosting_plans WHERE id=$1 AND is_active=true', [plan_id]);
-    if (!plan.rows.length) return res.status(404).json({ error: 'Plan not found.' });
-    const end = new Date();
-    billing_cycle === 'annual' ? end.setFullYear(end.getFullYear() + 1) : end.setMonth(end.getMonth() + 1);
-    const cpanel_user = 'u' + req.user.id.replace(/-/g, '').substring(0, 8);
-    const { rows } = await pool.query(
-      `INSERT INTO hosting_subscriptions(user_id, plan_id, status, billing_cycle, domain_id, cpanel_username, current_period_end)
-       VALUES($1,$2,'pending',$3,$4,$5,$6) RETURNING *`,
-      [req.user.id, plan_id, billing_cycle, domain_id || null, cpanel_user, end]);
-    res.status(201).json({ subscription: rows[0] });
+    const { plan_id, domain_id, billing_cycle = 'monthly' } = req.body;
+    const { rows: [plan] } = await pool.query('SELECT * FROM hosting_plans WHERE id = $1', [plan_id]);
+    if (!plan) return res.status(404).json({ error: 'Plan not found' });
+    const price = billing_cycle === 'annual' ? plan.price_annual_pkr : plan.price_monthly_pkr;
+    const { rows: [order] } = await pool.query(
+      'INSERT INTO orders (user_id, status, subtotal_pkr, total_pkr) VALUES ($1,$2,$3,$3) RETURNING *',
+      [req.user.id, 'pending', price]
+    );
+    await pool.query(
+      `INSERT INTO order_items (order_id, item_type, item_id, description, quantity, unit_price, total_price)
+       VALUES ($1,'hosting',$2,$3,1,$4,$4)`,
+      [order.id, plan_id, `${plan.name} Hosting — ${billing_cycle}`, price]
+    );
+    res.status(201).json({ order, message: 'Order created. Proceed to payment.' });
   } catch (e) { next(e); }
 });
 
-// PATCH cancel
+// PATCH cancel subscription
 router.patch('/subscriptions/:id/cancel', authenticate, async (req, res, next) => {
   try {
-    const { rows } = await pool.query(
-      "UPDATE hosting_subscriptions SET status='cancelled', auto_renew=false WHERE id=$1 AND user_id=$2 RETURNING *",
-      [req.params.id, req.user.id]);
-    if (!rows.length) return res.status(404).json({ error: 'Not found.' });
-    res.json({ subscription: rows[0] });
+    const { rows: [sub] } = await pool.query(
+      'UPDATE hosting_subscriptions SET status=$1,updated_at=NOW() WHERE id=$2 AND user_id=$3 RETURNING *',
+      ['cancelled', req.params.id, req.user.id]
+    );
+    if (!sub) return res.status(404).json({ error: 'Subscription not found' });
+    res.json({ subscription: sub });
   } catch (e) { next(e); }
 });
 

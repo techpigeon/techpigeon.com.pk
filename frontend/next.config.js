@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  images: { domains: ['www.techpigeon.org', 'res.cloudinary.com'] },
+module.exports = {
+  reactStrictMode: true,
+  images: {
+    domains: ['www.techpigeon.org'],
+  },
+  // Ensure all pages are treated as dynamic (no static generation)
+  // This prevents build-time timeouts and server/client boundary issues
 };
-module.exports = nextConfig;

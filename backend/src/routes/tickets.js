@@ -1,52 +1,70 @@
-const router = require('express').Router();
-const { pool } = require('../config/db');
+const express = require('express');
+const router = express.Router();
+const { pool } = require('../db');
 const { authenticate } = require('../middleware/auth');
 
+// GET my tickets
 router.get('/', authenticate, async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM tickets WHERE user_id=$1 ORDER BY created_at DESC', [req.user.id]);
+    const { rows } = await pool.query(
+      `SELECT t.*, (SELECT COUNT(*) FROM ticket_messages tm WHERE tm.ticket_id=t.id) AS message_count
+       FROM tickets t WHERE t.user_id=$1 ORDER BY t.created_at DESC`,
+      [req.user.id]
+    );
     res.json({ tickets: rows });
   } catch (e) { next(e); }
 });
 
-router.post('/', authenticate, async (req, res, next) => {
-  try {
-    const { subject, department = 'general', priority = 'medium', message } = req.body;
-    if (!subject || !message) return res.status(400).json({ error: 'Subject and message are required.' });
-    const ticket_no = `TCK-${Date.now()}`;
-    const { rows } = await pool.query(
-      `INSERT INTO tickets(user_id, ticket_no, subject, department, priority, status)
-       VALUES($1,$2,$3,$4,$5,'open') RETURNING *`,
-      [req.user.id, ticket_no, subject, department, priority]);
-    await pool.query(
-      'INSERT INTO ticket_messages(ticket_id, sender_id, message, is_staff) VALUES($1,$2,$3,false)',
-      [rows[0].id, req.user.id, message]);
-    res.status(201).json({ ticket: rows[0] });
-  } catch (e) { next(e); }
-});
-
+// GET single ticket with messages
 router.get('/:id', authenticate, async (req, res, next) => {
   try {
-    const t = await pool.query('SELECT * FROM tickets WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
-    if (!t.rows.length) return res.status(404).json({ error: 'Ticket not found.' });
-    const msgs = await pool.query(
-      `SELECT tm.*, u.first_name, u.last_name, u.role
-       FROM ticket_messages tm JOIN users u ON tm.sender_id=u.id
-       WHERE tm.ticket_id=$1 ORDER BY tm.created_at`, [req.params.id]);
-    res.json({ ticket: t.rows[0], messages: msgs.rows });
+    const { rows: [ticket] } = await pool.query('SELECT * FROM tickets WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+    const { rows: messages } = await pool.query(
+      `SELECT tm.*, u.first_name, u.last_name FROM ticket_messages tm
+       JOIN users u ON u.id=tm.sender_id WHERE tm.ticket_id=$1 ORDER BY tm.created_at ASC`,
+      [ticket.id]
+    );
+    res.json({ ticket: { ...ticket, messages } });
   } catch (e) { next(e); }
 });
 
+// POST create ticket
+router.post('/', authenticate, async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    const { subject, department = 'General', priority = 'medium', message } = req.body;
+    if (!subject || !message) return res.status(400).json({ error: 'Subject and message are required' });
+    await client.query('BEGIN');
+    const ticketNo = 'TCK-' + Date.now().toString().slice(-6);
+    const { rows: [ticket] } = await client.query(
+      `INSERT INTO tickets (user_id, ticket_no, subject, department, priority, status)
+       VALUES ($1,$2,$3,$4,$5,'open') RETURNING *`,
+      [req.user.id, ticketNo, subject, department, priority]
+    );
+    await client.query(
+      'INSERT INTO ticket_messages (ticket_id, sender_id, message, is_staff) VALUES ($1,$2,$3,false)',
+      [ticket.id, req.user.id, message]
+    );
+    await client.query('COMMIT');
+    res.status(201).json({ ticket });
+  } catch (e) { await client.query('ROLLBACK'); next(e); } finally { client.release(); }
+});
+
+// POST reply to ticket
 router.post('/:id/reply', authenticate, async (req, res, next) => {
   try {
     const { message } = req.body;
-    if (!message) return res.status(400).json({ error: 'Message required.' });
+    const { rows: [ticket] } = await pool.query('SELECT * FROM tickets WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id]);
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
     await pool.query(
-      'INSERT INTO ticket_messages(ticket_id, sender_id, message, is_staff) VALUES($1,$2,$3,false)',
-      [req.params.id, req.user.id, message]);
-    await pool.query("UPDATE tickets SET status='in_progress', updated_at=NOW() WHERE id=$1 AND user_id=$2",
-      [req.params.id, req.user.id]);
-    res.json({ message: 'Reply sent.' });
+      'INSERT INTO ticket_messages (ticket_id, sender_id, message, is_staff) VALUES ($1,$2,$3,false)',
+      [ticket.id, req.user.id, message]
+    );
+    if (ticket.status === 'resolved') {
+      await pool.query('UPDATE tickets SET status=$1, updated_at=NOW() WHERE id=$2', ['open', ticket.id]);
+    }
+    res.json({ success: true });
   } catch (e) { next(e); }
 });
 
