@@ -1,8 +1,8 @@
 const router = require('express').Router();
 const crypto = require('crypto');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const { pool } = require('../config/db');
-const { authenticate } = require('../middleware/auth');
+const { pool } = require('../db');
+const { authenticate } = require('../middleware/middleware_v2');
 
 // ── STRIPE ──────────────────────────────────────────────────────
 router.post('/stripe/create-intent', authenticate, async (req, res, next) => {
@@ -151,7 +151,7 @@ router.post('/bank/initiate', authenticate, async (req, res, next) => {
 });
 
 // ── ADMIN: Confirm manual payment ───────────────────────────
-const { requireRole } = require('../middleware/auth');
+const { requireRole } = require('../middleware/middleware_v2');
 router.post('/admin/confirm/:payment_id', authenticate, requireRole('admin','support'), async (req, res, next) => {
   try {
     const { rows } = await pool.query('SELECT * FROM payments WHERE id=$1', [req.params.payment_id]);

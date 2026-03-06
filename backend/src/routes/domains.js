@@ -1,6 +1,6 @@
 const router = require('express').Router();
-const { pool } = require('../config/db');
-const { authenticate, optionalAuth } = require('../middleware/auth');
+const { pool } = require('../db');
+const { authenticate, optionalAuth } = require('../middleware/middleware_v2');
 const TLD_PRICING = { '.com':{pkr:3499,usd:12.99}, '.net':{pkr:3199,usd:11.99}, '.org':{pkr:2999,usd:10.99}, '.pk':{pkr:1099,usd:3.99}, '.com.pk':{pkr:999,usd:3.49}, '.net.pk':{pkr:999,usd:3.49}, '.io':{pkr:10999,usd:39.99}, '.co':{pkr:6899,usd:24.99}, '.info':{pkr:2499,usd:8.99}, '.biz':{pkr:2799,usd:9.99} };
 
 router.get('/search', async (req, res, next) => {

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
-const { authenticate } = require('../middleware/auth');
+const { authenticate } = require('../middleware/middleware_v2');
 
 // GET my tickets
 router.get('/', authenticate, async (req, res, next) => {

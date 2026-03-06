@@ -4,7 +4,7 @@ const cors       = require('cors');
 const helmet     = require('helmet');
 const morgan     = require('morgan');
 const rateLimit  = require('express-rate-limit');
-const { errorHandler } = require('./middleware/auth');
+const { errorHandler } = require('./middleware/middleware_v2');
 
 const app = express();
 

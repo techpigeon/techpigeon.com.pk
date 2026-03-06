@@ -2,9 +2,9 @@ const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { pool } = require('../config/db');
+const { pool } = require('../db');
 const { sendEmail } = require('../config/mailer');
-const { authenticate } = require('../middleware/auth');
+const { authenticate } = require('../middleware/middleware_v2');
 
 const sign = (id, role) => jwt.sign({ sub: id, role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
 

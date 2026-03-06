@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
-const { authenticate } = require('../middleware/auth');
+const { authenticate } = require('../middleware/middleware_v2');
 
 // GET current user profile
 router.get('/me', authenticate, async (req, res, next) => {
