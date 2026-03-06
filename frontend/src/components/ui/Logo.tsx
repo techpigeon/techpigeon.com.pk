@@ -11,16 +11,21 @@ export default function Logo({
   variant?: 'dark' | 'white';
   href?: string;
 }) {
-  const dim = { sm: { w: 30, f: '1.05rem' }, md: { w: 38, f: '1.3rem' }, lg: { w: 48, f: '1.65rem' } }[size];
+  // Increased sizes for PNG logo
+  const dim = {
+    sm: { w: 40, f: '1.05rem' },
+    md: { w: 52, f: '1.4rem' },
+    lg: { w: 64, f: '1.75rem' }
+  }[size];
+
   const textColor   = variant === 'white' ? '#ffffff' : '#0B1D3A';
   const accentColor = variant === 'white' ? '#93C5FD' : '#00A8E8';
 
   const mark = (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, textDecoration: 'none' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
       
-      {/* Your actual PNG logo */}
       <Image
-        src="/logo.png"     // make sure logo.png is inside /public
+        src="/logo.png"
         width={dim.w}
         height={dim.w}
         alt="TechPigeon"
@@ -28,7 +33,6 @@ export default function Logo({
         priority
       />
 
-      {/* Wordmark */}
       <span
         style={{
           fontFamily: "'DM Serif Display', serif",
