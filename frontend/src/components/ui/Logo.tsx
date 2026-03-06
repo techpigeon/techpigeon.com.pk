@@ -17,7 +17,7 @@ export default function Logo({
   const mark = (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9, textDecoration: 'none' }}>
       {/* Pigeon SVG — flying pigeon matching TechPigeon brand */}
-      <svg width={dim.w} height={dim.w} viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="TechPigeon logo">
+      <svg width={dim.w} height={dim.w} viewBox="0 0 44 44" fill="none" xmlns="https://assets.softr-files.com/applications/13a6d5f4-cfee-4521-bc3c-908b851667e1/assets/2fed0b00-5d00-4d6d-adc0-4aeccdac4377.png" aria-label="TechPigeon logo">
         <rect width="44" height="44" rx="10" fill="#00A8E8"/>
         {/* Body */}
         <path d="M22 9C16 9 11 14 11 20.5C11 24.5 13.2 27.8 17 29.3L14.5 36L21.5 32C21.7 32 21.8 32 22 32C28 32 33 27 33 20.5C33 14 28 9 22 9Z" fill="white"/>
