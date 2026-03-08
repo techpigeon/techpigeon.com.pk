@@ -58,7 +58,7 @@ export default function ResetPasswordPage() {
           {/* ── Success state ────────────────────────────────────── */}
           {sent ? (
             <div className="text-center">
-              <Alert variant="success">
+              <Alert type="success">
                 Password reset link has been sent successfully!
               </Alert>
 
