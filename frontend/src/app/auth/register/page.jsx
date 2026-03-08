@@ -3,12 +3,12 @@ export const dynamic = 'force-dynamic';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import Button from '../../../../components/ui/Button';
-import Input from '../../../../components/ui/Input';
-import Alert from '../../../../components/ui/Alert';
-import Logo from '../../../../components/ui/Logo';
-import { useAuth } from '../../../../context/AuthContext';
-import { authApi } from '../../../../lib/api';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import Alert from '@/components/ui/Alert';
+import Logo from '@/components/ui/Logo';
+import { useAuth } from '@/context/AuthContext';
+import { authApi } from '@/lib/api';
 
 // ─── Feature bullets for left panel ────────────────────────────────
 const FEATURES = [
