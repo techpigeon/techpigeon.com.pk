@@ -2,10 +2,10 @@
 export const dynamic = 'force-dynamic';
 import { useState } from 'react';
 import Link from 'next/link';
-import Button from '../../../../components/ui/Button';
-import Badge from '../../../../components/ui/Badge';
-import Modal from '../../../../components/ui/Modal';
-import Alert from '../../../../components/ui/Alert';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
+import Modal from '@/components/ui/Modal';
+import Alert from '@/components/ui/Alert';
 
 // ─── Mock data matching hosting_subscriptions + hosting_plans schema ───
 const SUBSCRIPTIONS = [

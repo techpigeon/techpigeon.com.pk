@@ -1,11 +1,11 @@
 'use client';
 export const dynamic = 'force-dynamic';
 import { useState } from 'react';
-import Button from '../../../../components/ui/Button';
-import Badge from '../../../../components/ui/Badge';
-import Modal from '../../../../components/ui/Modal';
-import Input from '../../../../components/ui/Input';
-import Alert from '../../../../components/ui/Alert';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
+import Modal from '@/components/ui/Modal';
+import Input from '@/components/ui/Input';
+import Alert from '@/components/ui/Alert';
 
 // ─── Mock data matching DB schema ─────────────────────────────────
 const DOMAINS = [

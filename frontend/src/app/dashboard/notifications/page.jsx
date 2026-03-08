@@ -1,8 +1,8 @@
 'use client';
 export const dynamic = 'force-dynamic';
 import { useState } from 'react';
-import Button from '../../../../components/ui/Button';
-import Badge from '../../../../components/ui/Badge';
+import Button from '../../../components/ui/Button';
+import Badge from '../../../components/ui/Badge';
 
 // ─── Mock data matching notifications schema ──────────────────────
 const INITIAL_NOTIFICATIONS = [

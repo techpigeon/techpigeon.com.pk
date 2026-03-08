@@ -2,9 +2,9 @@
 export const dynamic = 'force-dynamic';
 import { useState } from 'react';
 import Link from 'next/link';
-import Button from '../../../../components/ui/Button';
-import Badge from '../../../../components/ui/Badge';
-import Modal from '../../../../components/ui/Modal';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
+import Modal from '@/components/ui/Modal';
 
 // ─── Mock data matching enrollments + courses schema ──────────────
 const ENROLLMENTS = [
