@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 import { useState } from 'react';
 import Link from 'next/link';
 import Footer from '../../components/layout/Footer';
-import { COURSES } from '../../lib/data';
+import { useCourses, usePageContent } from '../../lib/useContent';
 
 // ─── Derived look-ups ──────────────────────────────────────────────
 const INSTRUCTOR_MAP = {
@@ -41,12 +41,15 @@ const CATEGORIES = ['All', 'Cloud', 'Security', 'Networking', 'DevOps', 'Linux']
 
 // ─── Main Page Component ───────────────────────────────────────────
 export default function TrainingCatalogPage() {
+  const { courses } = useCourses();
+  const { sections } = usePageContent('training');
+  const hero = sections.hero || {};
   const [activeCat, setActiveCat] = useState('All');
 
   const filtered =
     activeCat === 'All'
-      ? COURSES
-      : COURSES.filter((c) => c.cat === activeCat);
+      ? courses
+      : courses.filter((c) => c.category === activeCat);
 
   return (
     <main>
@@ -75,25 +78,24 @@ export default function TrainingCatalogPage() {
           {/* Subtitle */}
           <p
             className="text-sm font-bold uppercase tracking-widest mb-3"
-            style={{ color: '#5cc4eb', fontFamily: "'Open Sans', sans-serif" }}
+            style={{ color: '#5cc4eb', fontFamily: 'var(--font-body, Open Sans, sans-serif)' }}
           >
-            IT Training &amp; Certification
+            {hero.data?.badge || 'IT Training & Certification'}
           </p>
 
           {/* Heading */}
           <h1
             className="text-4xl md:text-5xl leading-tight mb-4"
-            style={{ fontFamily: "'Aleo', serif", color: '#bba442' }}
+            style={{ fontFamily: 'var(--font-heading, Aleo, serif)', color: '#bba442' }}
           >
-            Learn From Industry Experts
+            {hero.title || 'Learn From Industry Experts'}
           </h1>
 
           <p
             className="text-base leading-relaxed mb-10 max-w-xl"
-            style={{ fontFamily: "'Open Sans', sans-serif", color: '#1d1d1d' }}
+            style={{ fontFamily: 'var(--font-body, Open Sans, sans-serif)', color: '#1d1d1d' }}
           >
-            Hands-on courses in cloud computing, cybersecurity, networking,
-            Linux, and DevOps — taught by certified professionals in Pakistan.
+            {hero.subtitle || 'Hands-on courses in cloud computing, cybersecurity, networking, Linux, and DevOps — taught by certified professionals in Pakistan.'}
           </p>
 
           {/* Category Filter Pills */}
@@ -109,7 +111,7 @@ export default function TrainingCatalogPage() {
                     background: isActive ? '#e8f6fc' : '#ffffff',
                     borderColor: isActive ? '#5cc4eb' : '#e2e8f0',
                     color: isActive ? '#5cc4eb' : '#64748b',
-                    fontFamily: "'Open Sans', sans-serif",
+                    fontFamily: 'var(--font-body, Open Sans, sans-serif)',
                   }}
                 >
                   {cat}
@@ -127,18 +129,18 @@ export default function TrainingCatalogPage() {
             <div className="bg-white border border-slate-200 rounded-2xl p-16 text-center">
               <div className="text-5xl mb-4">🎓</div>
               <h3
-                className="font-semibold text-lg mb-2"
-                style={{ fontFamily: "'Aleo', serif", color: '#bba442' }}
-              >
-                No courses found
-              </h3>
+                  className="font-semibold text-lg mb-2"
+                  style={{ fontFamily: 'var(--font-heading, Aleo, serif)', color: '#bba442' }}
+                >
+                  No courses found
+                </h3>
               <p
                 className="text-sm"
                 style={{
-                  fontFamily: "'Open Sans', sans-serif",
-                  color: '#64748b',
-                }}
-              >
+                    fontFamily: 'var(--font-body, Open Sans, sans-serif)',
+                    color: '#64748b',
+                  }}
+                >
                 No courses available in this category yet. Check back soon!
               </p>
             </div>
@@ -146,15 +148,15 @@ export default function TrainingCatalogPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filtered.map((course) => {
                 const instructor =
-                  INSTRUCTOR_MAP[course.cat] || 'TechPigeon Instructor';
-                const modules = Math.round(course.hrs * 0.6);
+                  course.instructor_name || INSTRUCTOR_MAP[course.category] || 'TechPigeon Instructor';
+                const modules = course.total_modules || Math.max(1, Math.round(Number(course.duration_hours || 0) * 0.6));
                 const bg =
-                  CATEGORY_GRADIENTS[course.cat] ||
+                  CATEGORY_GRADIENTS[course.category] ||
                   'linear-gradient(135deg, #f1f5f9, #e2e8f0)';
                 const catColor =
-                  CATEGORY_COLORS[course.cat] || '#5cc4eb';
-                const levelStyle =
-                  LEVEL_STYLES[course.level] || LEVEL_STYLES.Beginner;
+                  CATEGORY_COLORS[course.category] || '#5cc4eb';
+                const normalizedLevel = course.level ? course.level.charAt(0).toUpperCase() + course.level.slice(1) : 'Beginner';
+                const levelStyle = LEVEL_STYLES[normalizedLevel] || LEVEL_STYLES.Beginner;
 
                 return (
                   <Link
@@ -170,7 +172,7 @@ export default function TrainingCatalogPage() {
                         className="h-36 flex items-center justify-center text-5xl relative"
                         style={{ background: bg }}
                       >
-                        <span className="drop-shadow-sm">{course.emoji}</span>
+                          <span className="drop-shadow-sm">{course.thumbnail_url ? '🖼️' : '🎓'}</span>
                       </div>
 
                       {/* ── Card Body ────────────────────────── */}
@@ -186,7 +188,7 @@ export default function TrainingCatalogPage() {
                               borderColor: levelStyle.border,
                             }}
                           >
-                            {course.level}
+                            {normalizedLevel}
                           </span>
 
                           {/* Category Badge */}
@@ -197,7 +199,7 @@ export default function TrainingCatalogPage() {
                               color: catColor,
                             }}
                           >
-                            {course.cat}
+                            {course.category}
                           </span>
                         </div>
 
@@ -205,10 +207,10 @@ export default function TrainingCatalogPage() {
                         <h3
                           className="text-base font-bold leading-snug mb-2"
                           style={{
-                            fontFamily: "'Aleo', serif",
-                            color: '#1d1d1d',
-                          }}
-                        >
+                              fontFamily: 'var(--font-heading, Aleo, serif)',
+                              color: '#1d1d1d',
+                            }}
+                          >
                           {course.title}
                         </h3>
 
@@ -216,10 +218,10 @@ export default function TrainingCatalogPage() {
                         <p
                           className="text-xs mb-4"
                           style={{
-                            fontFamily: "'Open Sans', sans-serif",
-                            color: '#64748b',
-                          }}
-                        >
+                              fontFamily: 'var(--font-body, Open Sans, sans-serif)',
+                              color: '#64748b',
+                            }}
+                          >
                           <span className="mr-1.5">👤</span>
                           {instructor}
                         </p>
@@ -231,10 +233,10 @@ export default function TrainingCatalogPage() {
                         <div
                           className="flex items-center gap-4 text-xs mb-4 pb-4 border-b border-slate-100"
                           style={{
-                            fontFamily: "'Open Sans', sans-serif",
-                            color: '#64748b',
-                          }}
-                        >
+                              fontFamily: 'var(--font-body, Open Sans, sans-serif)',
+                              color: '#64748b',
+                            }}
+                          >
                           <span className="flex items-center gap-1.5">
                             <svg
                               className="w-3.5 h-3.5"
@@ -246,7 +248,7 @@ export default function TrainingCatalogPage() {
                               <circle cx="12" cy="12" r="10" />
                               <path d="M12 6v6l4 2" />
                             </svg>
-                            {course.hrs} Hours
+                            {course.duration_hours} Hours
                           </span>
                           <span className="flex items-center gap-1.5">
                             <svg
@@ -268,16 +270,16 @@ export default function TrainingCatalogPage() {
                             <span
                               className="text-xl font-bold"
                               style={{
-                                fontFamily: "'Aleo', serif",
+                                fontFamily: 'var(--font-heading, Aleo, serif)',
                                 color: '#bba442',
                               }}
                             >
-                              Rs.{course.price.toLocaleString()}
+                              Rs.{Number(course.price_pkr).toLocaleString()}
                             </span>
                             <span
                               className="text-xs ml-1"
                               style={{
-                                fontFamily: "'Open Sans', sans-serif",
+                                fontFamily: 'var(--font-body, Open Sans, sans-serif)',
                                 color: '#94a3b8',
                               }}
                             >
@@ -287,10 +289,10 @@ export default function TrainingCatalogPage() {
                           <span
                             className="text-xs font-semibold transition-colors duration-200 group-hover:text-[#5cc4eb]"
                             style={{
-                              fontFamily: "'Open Sans', sans-serif",
-                              color: '#bba442',
-                            }}
-                          >
+                                fontFamily: 'var(--font-body, Open Sans, sans-serif)',
+                                color: '#bba442',
+                              }}
+                            >
                             Enroll Now &rarr;
                           </span>
                         </div>

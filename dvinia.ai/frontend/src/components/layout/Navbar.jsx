@@ -4,18 +4,18 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Logo from '../ui/Logo';
 import Button from '../ui/Button';
-import { NAV_LINKS } from '../../lib/data';
 import { useAuth } from '../../context/AuthContext';
-
-const PRIMARY_LINKS = NAV_LINKS.slice(0, 5);   // Home → Training
-const SECONDARY_LINKS = NAV_LINKS.slice(5);     // About, Contact
+import { useNavLinks } from '../../lib/useContent';
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, isAdmin, logout, loading } = useAuth();
+  const { links } = useNavLinks();
   const [open, setOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const primaryLinks = links.filter((l) => l.position === 'primary');
+  const secondaryLinks = links.filter((l) => l.position === 'secondary');
 
   const isActive = (href) =>
     href === '/'
@@ -39,7 +39,7 @@ export default function Navbar() {
 
         {/* ── Primary nav links (desktop) ── */}
         <div className="hidden md:flex items-center gap-1">
-          {PRIMARY_LINKS.map((l) => (
+          {primaryLinks.map((l) => (
             <Link
               key={l.href}
               href={l.href}
@@ -56,7 +56,7 @@ export default function Navbar() {
 
         {/* ── Secondary links + auth (desktop) ── */}
         <div className="hidden md:flex items-center gap-3">
-          {SECONDARY_LINKS.map((l) => (
+          {secondaryLinks.map((l) => (
             <Link
               key={l.href}
               href={l.href}
@@ -129,7 +129,7 @@ export default function Navbar() {
       {/* ── Mobile drawer ── */}
       {open && (
         <div className="md:hidden border-t border-slate-100 bg-white px-5 py-4 flex flex-col gap-2">
-          {PRIMARY_LINKS.map((l) => (
+          {primaryLinks.map((l) => (
             <Link
               key={l.href}
               href={l.href}
@@ -142,7 +142,7 @@ export default function Navbar() {
             </Link>
           ))}
           <hr className="my-2 border-slate-100" />
-          {SECONDARY_LINKS.map((l) => (
+          {secondaryLinks.map((l) => (
             <Link
               key={l.href}
               href={l.href}
