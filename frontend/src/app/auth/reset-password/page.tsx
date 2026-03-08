@@ -2,10 +2,10 @@
 export const dynamic = 'force-dynamic';
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
-import Button from '../../../../components/ui/Button';
-import Input from '../../../../components/ui/Input';
-import Alert from '../../../../components/ui/Alert';
-import Logo from '../../../../components/ui/Logo';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import Alert from '@/components/ui/Alert';
+import Logo from '@/components/ui/Logo';
 
 // ─── Validation ────────────────────────────────────────────────────
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
