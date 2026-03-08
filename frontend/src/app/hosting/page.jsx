@@ -39,11 +39,14 @@ function Spec({ label, value, dark }) {
 
 // ─── Main page ─────────────────────────────────────────────────────
 export default function HostingPage() {
+  const { plans } = useHostingPlans();
+  const { sections } = usePageContent('hosting');
+  const hero = sections.hero || {};
   const [billing, setBilling] = useState('monthly');
   const isAnnual = billing === 'annual';
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ fontFamily: "'Open Sans', sans-serif", color: '#1d1d1d' }}>
+    <div className="min-h-screen flex flex-col" style={{ fontFamily: 'var(--font-body, Open Sans, sans-serif)', color: '#1d1d1d' }}>
 
       {/* ── Hero ─────────────────────────────────────────────────── */}
       <section
@@ -56,20 +59,19 @@ export default function HostingPage() {
             className="text-sm font-semibold tracking-widest uppercase mb-3"
             style={{ color: '#5cc4eb' }}
           >
-            Cloud Hosting Pakistan
+            {hero.data?.badge || 'Cloud Hosting Pakistan'}
           </p>
 
           {/* Heading */}
           <h1
             className="text-4xl md:text-5xl font-bold leading-tight mb-5"
-            style={{ fontFamily: "'Aleo', serif", color: '#bba442' }}
+            style={{ fontFamily: 'var(--font-heading, Aleo, serif)', color: '#bba442' }}
           >
-            Hosting That Scales With You
+            {hero.title || 'Hosting That Scales With You'}
           </h1>
 
           <p className="text-base md:text-lg max-w-2xl mx-auto mb-10" style={{ color: '#64748b' }}>
-            Blazing-fast NVMe cloud servers in Lahore &amp; Karachi. Free SSL, daily backups,
-            and 24/7 local support — all at prices built for Pakistan.
+            {hero.subtitle || 'Blazing-fast NVMe cloud servers in Lahore & Karachi. Free SSL, daily backups, and 24/7 local support — all at prices built for Pakistan.'}
           </p>
 
           {/* ── Billing toggle ───────────────────────────────────── */}
@@ -104,9 +106,10 @@ export default function HostingPage() {
       {/* ── Pricing cards ────────────────────────────────────────── */}
       <section className="flex-1 px-5 pb-20 -mt-2" style={{ background: 'linear-gradient(155deg,#faf8f0,#FFFFFF)' }}>
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-7 items-start">
-          {PLANS.map((plan) => {
-            const dark = plan.featured;
-            const price = isAnnual ? plan.price_a : plan.price_m;
+          {plans.map((plan) => {
+            const dark = plan.is_featured;
+            const price = isAnnual ? Number(plan.price_annual_pkr) : Number(plan.price_monthly_pkr);
+            const features = Array.isArray(plan.features) ? plan.features : [];
 
             return (
               <div
@@ -134,7 +137,7 @@ export default function HostingPage() {
                 <h3
                   className="text-lg font-bold mb-1"
                   style={{
-                    fontFamily: "'Aleo', serif",
+                    fontFamily: 'var(--font-heading, Aleo, serif)',
                     color: dark ? '#ffffff' : '#1d1d1d',
                   }}
                 >
@@ -145,7 +148,7 @@ export default function HostingPage() {
                 <div className="flex items-end gap-1 mb-5 mt-2">
                   <span
                     className="text-4xl font-extrabold leading-none"
-                    style={{ fontFamily: "'Aleo', serif", color: dark ? '#F8D313' : '#bba442' }}
+                    style={{ fontFamily: 'var(--font-heading, Aleo, serif)', color: dark ? '#F8D313' : '#bba442' }}
                   >
                     Rs.{price.toLocaleString()}
                   </span>
@@ -165,14 +168,14 @@ export default function HostingPage() {
 
                 {/* Specs */}
                 <div className="mb-5">
-                  <Spec label="Storage" value={plan.disk} dark={dark} />
-                  <Spec label="Bandwidth" value={plan.bw} dark={dark} />
-                  <Spec label="Websites" value={plan.sites} dark={dark} />
+                  <Spec label="Storage" value={`${plan.disk_gb} GB`} dark={dark} />
+                  <Spec label="Bandwidth" value={plan.bandwidth_gb ? `${plan.bandwidth_gb} GB` : 'Unlimited'} dark={dark} />
+                  <Spec label="Websites" value={plan.websites || 'Unlimited'} dark={dark} />
                 </div>
 
                 {/* Features */}
                 <ul className="flex-1 space-y-2.5 mb-7 list-none p-0 m-0">
-                  {plan.features.map((f) => (
+                  {features.map((f) => (
                     <li key={f} className="flex items-start gap-2 text-sm" style={{ color: dark ? 'rgba(255,255,255,0.75)' : '#475569' }}>
                       <Check />
                       {f}
@@ -181,7 +184,7 @@ export default function HostingPage() {
                 </ul>
 
                 {/* CTA */}
-                <Link href={`/hosting/checkout?plan=${plan.id}&billing=${billing}`} className="no-underline">
+                <Link href={`/hosting/checkout?plan=${plan.slug || plan.id}&billing=${billing}`} className="no-underline">
                   <Button
                     variant={dark ? 'gold' : 'primary'}
                     size="lg"

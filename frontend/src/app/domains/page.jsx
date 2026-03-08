@@ -162,7 +162,7 @@ export default function DomainsPage() {
                 }`}
               >
                 {t.ext}{' '}
-                <span className="text-[#bba442] ml-1">{formatPKR(t.pkr)}</span>
+                <span className="text-[#bba442] ml-1">{formatPKR(t.price_pkr)}</span>
               </button>
             ))}
           </div>
@@ -370,7 +370,7 @@ export default function DomainsPage() {
                       {t.ext}
                     </p>
                     <p className="text-sm font-semibold text-[#bba442]">
-                      {formatPKR(t.pkr)}
+                      {formatPKR(t.price_pkr)}
                       <span className="text-xs text-slate-400 font-normal">/yr</span>
                     </p>
                   </div>

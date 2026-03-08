@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import Image from 'next/image';
+import { useSite } from '../../context/SiteContext';
 
 export default function Logo({
   size = 'md',
@@ -11,6 +11,7 @@ export default function Logo({
   variant?: 'dark' | 'white';
   href?: string;
 }) {
+  const { s } = useSite();
   const dim = {
     sm: { w: 40, f: '1.05rem' },
     md: { w: 52, f: '1.4rem' },
@@ -21,18 +22,17 @@ export default function Logo({
   const accentColor = variant === 'white' ? '#f5edc8' : '#bba442';
 
   const mark = (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
-      <Image
-        src="/logo.png"
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
+      <img
+        src={s('logo_url', '/logo.png')}
         width={dim.w}
         height={dim.w}
-        alt="TechPigeon"
+        alt={s('site_name', 'TechPigeon')}
         style={{ objectFit: 'contain' }}
-        priority
       />
       <span
         style={{
-          fontFamily: "'Aleo', serif",
+          fontFamily: 'var(--font-heading, Aleo, serif)',
           fontSize: dim.f,
           color: textColor,
           fontWeight: 400,
@@ -41,8 +41,12 @@ export default function Logo({
           whiteSpace: 'nowrap',
         }}
       >
-        tech
-        <em style={{ color: accentColor, fontStyle: 'italic' }}>pigeon</em>
+        {String(s('site_name', 'TechPigeon')).toLowerCase().startsWith('tech') ? 'tech' : ''}
+        <em style={{ color: accentColor, fontStyle: 'italic' }}>
+          {String(s('site_name', 'TechPigeon')).toLowerCase().startsWith('tech')
+            ? String(s('site_name', 'TechPigeon')).slice(4).toLowerCase() || 'pigeon'
+            : s('site_name', 'TechPigeon')}
+        </em>
       </span>
     </span>
   );
