@@ -21,15 +21,20 @@ export default function Logo({
   const textColor   = variant === 'white' ? '#ffffff' : '#1d1d1d';
   const accentColor = variant === 'white' ? '#f5edc8' : '#bba442';
 
+  const logoUrl = s('logo_url');
+  const hasLogo = logoUrl && logoUrl !== '/logo.png'; // Assuming /logo.png doesn't exist
+
   const mark = (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
-      <img
-        src={s('logo_url', '/logo.png')}
-        width={dim.w}
-        height={dim.w}
-        alt={s('site_name', 'TechPigeon')}
-        style={{ objectFit: 'contain' }}
-      />
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: hasLogo ? 12 : 0, textDecoration: 'none' }}>
+      {hasLogo && (
+        <img
+          src={logoUrl}
+          width={dim.w}
+          height={dim.w}
+          alt={s('site_name', 'TechPigeon')}
+          style={{ objectFit: 'contain' }}
+        />
+      )}
       <span
         style={{
           fontFamily: 'var(--font-heading, Aleo, serif)',
