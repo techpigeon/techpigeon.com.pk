@@ -23,6 +23,8 @@ interface DomainRecord {
   nameservers: string[];
 }
 
+type BadgeVariant = 'blue' | 'green' | 'red' | 'yellow' | 'gray' | 'teal' | 'purple';
+
 /* ─── Mock data (matches DB schema: domains table) ──────────────── */
 const DOMAINS: DomainRecord[] = [
   {
@@ -188,7 +190,7 @@ const DOMAINS: DomainRecord[] = [
 ];
 
 /* ─── Helpers ───────────────────────────────────────────────────── */
-const STATUS_MAP: Record<string, { variant: string; label: string }> = {
+const STATUS_MAP: Record<DomainRecord['status'], { variant: BadgeVariant; label: string }> = {
   active:    { variant: 'green',  label: 'Active' },
   expired:   { variant: 'red',    label: 'Expired' },
   pending:   { variant: 'yellow', label: 'Pending' },

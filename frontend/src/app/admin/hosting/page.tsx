@@ -42,6 +42,8 @@ interface HostingSubscription {
   expires_at: string;
 }
 
+type BadgeVariant = 'blue' | 'green' | 'red' | 'yellow' | 'gray' | 'teal' | 'purple';
+
 // ─── Plans ─────────────────────────────────────────────────────────
 const PLANS: Record<string, HostingPlan> = {
   starter: {
@@ -264,7 +266,7 @@ const SUBSCRIPTIONS: HostingSubscription[] = [
 ];
 
 // ─── Status styling map ────────────────────────────────────────────
-const STATUS_MAP: Record<string, { variant: string; label: string }> = {
+const STATUS_MAP: Record<HostingSubscription['status'], { variant: BadgeVariant; label: string }> = {
   active: { variant: 'green', label: 'Active' },
   pending: { variant: 'yellow', label: 'Pending' },
   suspended: { variant: 'red', label: 'Suspended' },
