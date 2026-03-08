@@ -22,7 +22,7 @@ export default function Logo({
   const accentColor = variant === 'white' ? '#f5edc8' : '#bba442';
 
   const logoUrl = s('logo_url');
-  const hasLogo = logoUrl && logoUrl !== '/logo.png'; // Assuming /logo.png doesn't exist
+  const hasLogo = logoUrl && logoUrl.trim() !== ''; // Show logo if URL is provided and not empty
 
   const mark = (
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: hasLogo ? 12 : 0, textDecoration: 'none' }}>

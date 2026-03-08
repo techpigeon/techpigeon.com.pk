@@ -22,7 +22,7 @@ export function SiteProvider({ children }) {
           text_color: '#1d1d1d',
           heading_font: 'Aleo',
           body_font: 'Open Sans',
-          logo_url: '',
+          logo_url: '/logo.png',
           social_facebook: '#',
           social_linkedin: '#',
           social_twitter: '#',
