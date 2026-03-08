@@ -24,6 +24,8 @@ interface Course {
   description: string;
 }
 
+type BadgeVariant = 'blue' | 'green' | 'red' | 'yellow' | 'gray' | 'teal' | 'purple';
+
 // ─── Mock data (matches data.ts) ──────────────────────────────────
 const COURSES: Course[] = [
   {
@@ -134,7 +136,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   Linux: '#F8D313',
 };
 
-const LEVEL_VARIANTS: Record<string, string> = {
+const LEVEL_VARIANTS: Record<Course['level'], BadgeVariant> = {
   Beginner: 'green',
   Intermediate: 'yellow',
   Advanced: 'red',
