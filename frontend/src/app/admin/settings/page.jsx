@@ -136,6 +136,14 @@ export default function SettingsPage() {
               <TextInput value={settings.logo_url} onChange={v => set('logo_url', v)} placeholder="https://..." />
               {settings.logo_url && <img src={settings.logo_url} alt="Logo preview" className="mt-2 h-12 object-contain bg-slate-50 rounded p-2 border border-slate-200" />}
             </Field>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field label="Logo Width (px)" hint="Header logo width">
+                <TextInput type="number" value={settings.logo_width} onChange={v => set('logo_width', Number(v) || 0)} placeholder="210" />
+              </Field>
+              <Field label="Logo Height (px)" hint="Header logo height">
+                <TextInput type="number" value={settings.logo_height} onChange={v => set('logo_height', Number(v) || 0)} placeholder="48" />
+              </Field>
+            </div>
             <Field label="Favicon URL">
               <TextInput value={settings.favicon_url} onChange={v => set('favicon_url', v)} placeholder="https://..." />
               {settings.favicon_url && <img src={settings.favicon_url} alt="Favicon preview" className="mt-2 h-8 w-8 object-contain bg-slate-50 rounded p-1 border border-slate-200" />}
@@ -166,7 +174,7 @@ export default function SettingsPage() {
               <p style={{ fontFamily: `'${settings.body_font || 'Open Sans'}', sans-serif`, color: settings.text_color || '#1d1d1d' }} className="text-sm">Body text preview with your selected font and colors.</p>
             </div>
             <div className="mt-5">
-              <Button onClick={() => save(['logo_url','favicon_url','primary_color','secondary_color','navy_color','text_color','heading_font','body_font'])} loading={saving}>Save Branding</Button>
+              <Button onClick={() => save(['logo_url','logo_width','logo_height','favicon_url','primary_color','secondary_color','navy_color','text_color','heading_font','body_font'])} loading={saving}>Save Branding</Button>
             </div>
           </>
         )}

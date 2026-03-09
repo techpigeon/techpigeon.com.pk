@@ -6,6 +6,7 @@ import Logo from '../ui/Logo';
 import Button from '../ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import { useNavLinks } from '../../lib/useContent';
+import { useSite } from '../../context/SiteContext';
 
 const DEFAULT_LINKS = [
   { label: 'Home', href: '/', position: 'primary' },
@@ -24,6 +25,7 @@ export default function Navbar() {
   const router = useRouter();
   const { user, isAuthenticated, isAdmin, logout, loading } = useAuth();
   const { links } = useNavLinks();
+  const { s } = useSite();
   const [open, setOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const navLinks = links?.length ? links : DEFAULT_LINKS;
@@ -48,10 +50,12 @@ export default function Navbar() {
 
   const initials = user ? `${(user.first_name||'')[0]||''}${(user.last_name||'')[0]||''}`.toUpperCase() : '';
   const dashboardHref = isAdmin ? '/admin' : '/dashboard';
+  const logoH = Number(s('logo_height', 0)) || 0;
+  const navHeight = Math.max(64, Math.min(110, logoH + 24));
 
   return (
     <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
-      <div className="max-w-7xl mx-auto px-5 flex items-center justify-between h-16">
+      <div className="max-w-7xl mx-auto px-5 flex items-center justify-between" style={{ minHeight: `${navHeight}px` }}>
         {/* ── Logo ── */}
         <Logo size="lg" />
 

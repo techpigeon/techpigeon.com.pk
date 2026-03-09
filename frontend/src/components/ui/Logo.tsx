@@ -12,11 +12,20 @@ export default function Logo({
   href?: string;
 }) {
   const { s } = useSite();
-  const dim = {
+  const base = {
     sm: { w: 140, h: 34, f: '1.05rem' },
     md: { w: 210, h: 48, f: '1.4rem' },
     lg: { w: 260, h: 58, f: '1.75rem' }
   }[size];
+
+  const customW = Number(s('logo_width', 0)) || 0;
+  const customH = Number(s('logo_height', 0)) || 0;
+  const scale = size === 'sm' ? 0.7 : size === 'lg' ? 1.25 : 1;
+  const dim = {
+    w: customW > 0 ? Math.round(customW * scale) : base.w,
+    h: customH > 0 ? Math.round(customH * scale) : base.h,
+    f: base.f,
+  };
 
   const textColor   = variant === 'white' ? '#ffffff' : '#1d1d1d';
   const accentColor = variant === 'white' ? '#f5edc8' : '#bba442';
