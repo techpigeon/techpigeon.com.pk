@@ -33,9 +33,10 @@ router.post('/subscribe', authenticate, async (req, res, next) => {
     const { rows: [plan] } = await pool.query('SELECT * FROM hosting_plans WHERE id = $1', [plan_id]);
     if (!plan) return res.status(404).json({ error: 'Plan not found' });
     const price = billing_cycle === 'annual' ? plan.price_annual_pkr : plan.price_monthly_pkr;
+    const orderNo = 'TP-' + Date.now().toString().slice(-8);
     const { rows: [order] } = await pool.query(
-      'INSERT INTO orders (user_id, status, subtotal_pkr, total_pkr) VALUES ($1,$2,$3,$3) RETURNING *',
-      [req.user.id, 'pending', price]
+      'INSERT INTO orders (user_id, order_number, status, subtotal_pkr, total_pkr) VALUES ($1,$2,$3,$4,$4) RETURNING *',
+      [req.user.id, orderNo, 'pending', price]
     );
     await pool.query(
       `INSERT INTO order_items (order_id, item_type, item_id, description, quantity, unit_price, total_price)

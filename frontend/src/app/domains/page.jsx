@@ -2,6 +2,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useState, useRef } from 'react';
+import Link from 'next/link';
 import Footer from '../../components/layout/Footer';
 import Button from '../../components/ui/Button';
 import { useTlds, usePageContent } from '../../lib/useContent';
@@ -214,9 +215,14 @@ export default function DomainsPage() {
                     <span className="text-sm text-slate-500">
                       {cart.length} domain{cart.length > 1 ? 's' : ''} selected
                     </span>
-                    <Button size="sm" variant="gold">
-                      Checkout &rarr;
-                    </Button>
+                    <Link
+                      href={`/domains/checkout?domains=${encodeURIComponent(cart.join(','))}`}
+                      className="no-underline"
+                    >
+                      <Button size="sm" variant="gold">
+                        Checkout &rarr;
+                      </Button>
+                    </Link>
                   </div>
                 )}
               </div>

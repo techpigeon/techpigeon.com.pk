@@ -35,8 +35,20 @@ router.post('/register', authenticate, async (req, res, next) => {
     const price = TLD_PRICING[tld];
     if (!price) return res.status(400).json({ error: 'Unsupported TLD.' });
     const exp = new Date(); exp.setFullYear(exp.getFullYear()+years);
-    const { rows } = await pool.query(`INSERT INTO domains(user_id,domain_name,tld,full_domain,status,expires_at,auto_renew,whois_privacy,price_pkr,price_usd) VALUES($1,$2,$3,$4,'pending',$5,$6,$7,$8,$9) RETURNING *`,
-      [req.user.id, domain_name.toLowerCase(), tld, full, exp, auto_renew, whois_privacy, price.pkr*years, price.usd*years]);
+    const { rows } = await pool.query(
+      `INSERT INTO domains(user_id,domain_name,tld,status,expires_at,auto_renew,whois_privacy,price_pkr,renewal_pkr)
+       VALUES($1,$2,$3,'pending',$4,$5,$6,$7,$8) RETURNING *`,
+      [
+        req.user.id,
+        domain_name.toLowerCase(),
+        tld,
+        exp,
+        auto_renew,
+        whois_privacy,
+        price.pkr * years,
+        price.pkr,
+      ]
+    );
     res.status(201).json({ domain: rows[0] });
   } catch(e) { next(e); }
 });
