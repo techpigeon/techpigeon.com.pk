@@ -51,7 +51,7 @@ function normalizeOrder(order) {
 function PayModal({ order, open, onClose, onPaid }) {
   const [method, setMethod] = useState('jazzcash');
   const [mobile, setMobile] = useState('');
-  const [bankName, setBankName] = useState('HBL');
+  const [bankName, setBankName] = useState('Meezan Bank Limited (PKR)');
   const [txnRef, setTxnRef] = useState('');
   const [screenshot, setScreenshot] = useState(null);
   const [screenshotName, setScreenshotName] = useState('');
@@ -127,6 +127,7 @@ function PayModal({ order, open, onClose, onPaid }) {
         {method === 'bank_transfer' && (
           <>
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+              <p><b>Bank:</b> Meezan Bank Limited (PKR)</p>
               <p><b>Title:</b> TECHPIGEON</p>
               <p><b>IBAN:</b> PK95MEZN0034010105015073</p>
               <p><b>SWIFT CODE:</b> MEZNPKKA</p>

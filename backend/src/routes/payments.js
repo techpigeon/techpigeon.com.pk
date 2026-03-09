@@ -4,6 +4,13 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { pool } = require('../db');
 const { authenticate } = require('../middleware/middleware_v2');
 
+const BANK_DETAILS = {
+  bank_name: 'Meezan Bank Limited (PKR)',
+  title: 'TECHPIGEON',
+  iban: 'PK95MEZN0034010105015073',
+  swift_code: 'MEZNPKKA',
+};
+
 // ── STRIPE ──────────────────────────────────────────────────────
 router.post('/stripe/create-intent', authenticate, async (req, res, next) => {
   try {
@@ -162,9 +169,10 @@ router.post('/bank/initiate', authenticate, async (req, res, next) => {
     res.json({
       message: 'Bank transfer recorded. Admin will verify within 24 hours.',
       bank_details: {
-        title: 'TECHPIGEON',
-        iban: 'PK95MEZN0034010105015073',
-        swift_code: 'MEZNPKKA',
+        bank_name: BANK_DETAILS.bank_name,
+        title: BANK_DETAILS.title,
+        iban: BANK_DETAILS.iban,
+        swift_code: BANK_DETAILS.swift_code,
       },
     });
   } catch(e) { next(e); }
@@ -185,6 +193,9 @@ router.post('/admin/confirm/:payment_id', authenticate, requireRole('admin','sup
 
 // ── Helper: activate items after payment ────────────────────
 async function activateOrderItems(orderId) {
+  const { rows: order } = await pool.query('SELECT user_id,order_number FROM orders WHERE id=$1', [orderId]);
+  if (!order.length) return;
+
   const { rows: items } = await pool.query('SELECT * FROM order_items WHERE order_id=$1', [orderId]);
   for (const item of items) {
     if (item.item_type === 'domain' && item.item_id) {
@@ -195,17 +206,15 @@ async function activateOrderItems(orderId) {
     }
     if (item.item_type === 'course' && item.item_id) {
       const meta = item.meta || {};
-      if (meta.user_id) {
-        await pool.query(`INSERT INTO enrollments(user_id,course_id,status) VALUES($1,$2,'active') ON CONFLICT(user_id,course_id) DO NOTHING`, [meta.user_id, item.item_id]);
+      const userId = meta.user_id || order[0].user_id;
+      if (userId) {
+        await pool.query(`INSERT INTO enrollments(user_id,course_id,status) VALUES($1,$2,'active') ON CONFLICT(user_id,course_id) DO NOTHING`, [userId, item.item_id]);
       }
     }
   }
-  // Notify user
-  const { rows: order } = await pool.query('SELECT user_id,order_number FROM orders WHERE id=$1', [orderId]);
-  if (order.length) {
-    await pool.query(`INSERT INTO notifications(user_id,type,title,message,link) VALUES($1,'payment','Payment Confirmed ✅','Your order ${order[0].order_number} has been confirmed and services activated.','/dashboard/billing')`,
-      [order[0].user_id]);
-  }
+
+  await pool.query(`INSERT INTO notifications(user_id,type,title,message,link) VALUES($1,'payment','Payment Confirmed ✅','Your order ${order[0].order_number} has been confirmed and services activated.','/dashboard/billing')`,
+    [order[0].user_id]);
 }
 
 module.exports = router;

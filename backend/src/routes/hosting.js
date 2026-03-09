@@ -75,6 +75,20 @@ router.post('/subscribe', authenticate, async (req, res, next) => {
 });
 
 // PATCH cancel subscription
+router.patch('/subscriptions/:id', authenticate, async (req, res, next) => {
+  try {
+    const { auto_renew } = req.body;
+    if (auto_renew === undefined) return res.status(400).json({ error: 'Nothing to update.' });
+    const { rows: [sub] } = await pool.query(
+      'UPDATE hosting_subscriptions SET auto_renew=$1,updated_at=NOW() WHERE id=$2 AND user_id=$3 RETURNING *',
+      [auto_renew, req.params.id, req.user.id]
+    );
+    if (!sub) return res.status(404).json({ error: 'Subscription not found' });
+    res.json({ subscription: sub });
+  } catch (e) { next(e); }
+});
+
+// PATCH cancel subscription
 router.patch('/subscriptions/:id/cancel', authenticate, async (req, res, next) => {
   try {
     const { rows: [sub] } = await pool.query(

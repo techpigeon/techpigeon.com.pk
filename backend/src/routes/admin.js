@@ -30,6 +30,28 @@ async function ensureProjectsTable() {
   projectsReady = true;
 }
 
+async function activateOrderItems(orderId) {
+  const { rows: order } = await pool.query('SELECT user_id,order_number FROM orders WHERE id=$1', [orderId]);
+  if (!order.length) return;
+
+  const { rows: items } = await pool.query('SELECT * FROM order_items WHERE order_id=$1', [orderId]);
+  for (const item of items) {
+    if (item.item_type === 'domain' && item.item_id) {
+      await pool.query("UPDATE domains SET status='active' WHERE id=$1", [item.item_id]);
+    }
+    if (item.item_type === 'hosting' && item.item_id) {
+      await pool.query("UPDATE hosting_subscriptions SET status='active' WHERE id=$1", [item.item_id]);
+    }
+    if (item.item_type === 'course' && item.item_id) {
+      const meta = item.meta || {};
+      const userId = meta.user_id || order[0].user_id;
+      if (userId) {
+        await pool.query(`INSERT INTO enrollments(user_id,course_id,status) VALUES($1,$2,'active') ON CONFLICT(user_id,course_id) DO NOTHING`, [userId, item.item_id]);
+      }
+    }
+  }
+}
+
 // ── DASHBOARD STATS ──────────────────────────────────────────
 router.get('/stats', async (req, res, next) => {
   try {
@@ -158,6 +180,9 @@ router.post('/orders', async (req, res, next) => {
 
 router.patch('/orders/:id', async (req, res, next) => {
   try {
+    const { rows: before } = await pool.query('SELECT id,status FROM orders WHERE id=$1', [req.params.id]);
+    if (!before.length) return res.status(404).json({ error: 'Order not found.' });
+
     const { status, subtotal_pkr, tax_pkr, discount_pkr, total_pkr, notes, paid_at } = req.body;
     const { rows } = await pool.query(
       `UPDATE orders SET
@@ -172,7 +197,9 @@ router.patch('/orders/:id', async (req, res, next) => {
        WHERE id=$8 RETURNING *`,
       [status, subtotal_pkr, tax_pkr, discount_pkr, total_pkr, notes, paid_at, req.params.id]
     );
-    if (!rows.length) return res.status(404).json({ error: 'Order not found.' });
+    if (before[0].status !== 'paid' && rows[0].status === 'paid') {
+      await activateOrderItems(rows[0].id);
+    }
     res.json({ order: rows[0] });
   } catch(e) { next(e); }
 });
@@ -187,9 +214,14 @@ router.delete('/orders/:id', async (req, res, next) => {
 
 router.patch('/orders/:id/status', async (req, res, next) => {
   try {
+    const { rows: before } = await pool.query('SELECT id,status FROM orders WHERE id=$1', [req.params.id]);
+    if (!before.length) return res.status(404).json({ error: 'Order not found.' });
+
     const { status } = req.body;
     const { rows } = await pool.query('UPDATE orders SET status=$1 WHERE id=$2 RETURNING *', [status, req.params.id]);
-    if (!rows.length) return res.status(404).json({ error: 'Order not found.' });
+    if (before[0].status !== 'paid' && rows[0].status === 'paid') {
+      await activateOrderItems(rows[0].id);
+    }
     res.json({ order: rows[0] });
   } catch(e) { next(e); }
 });
@@ -226,6 +258,7 @@ router.post('/payments', async (req, res, next) => {
     );
     if (status === 'completed') {
       await pool.query(`UPDATE orders SET status='paid', paid_at=COALESCE(paid_at,NOW()), updated_at=NOW() WHERE id=$1`, [order_id]);
+      await activateOrderItems(order_id);
     }
     res.status(201).json({ payment: rows[0] });
   } catch(e) { next(e); }
@@ -233,6 +266,9 @@ router.post('/payments', async (req, res, next) => {
 
 router.patch('/payments/:id', async (req, res, next) => {
   try {
+    const { rows: before } = await pool.query('SELECT id,status FROM payments WHERE id=$1', [req.params.id]);
+    if (!before.length) return res.status(404).json({ error: 'Payment not found.' });
+
     const { method, amount_pkr, status, transaction_id, gateway_ref, gateway_response } = req.body;
     const { rows } = await pool.query(
       `UPDATE payments SET
@@ -247,8 +283,9 @@ router.patch('/payments/:id', async (req, res, next) => {
       [method, amount_pkr, status, transaction_id, gateway_ref, gateway_response, req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Payment not found.' });
-    if (rows[0].status === 'completed') {
+    if (before[0].status !== 'completed' && rows[0].status === 'completed') {
       await pool.query(`UPDATE orders SET status='paid', paid_at=COALESCE(paid_at,NOW()), updated_at=NOW() WHERE id=$1`, [rows[0].order_id]);
+      await activateOrderItems(rows[0].order_id);
     }
     res.json({ payment: rows[0] });
   } catch(e) { next(e); }

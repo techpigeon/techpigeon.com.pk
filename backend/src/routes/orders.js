@@ -7,7 +7,7 @@ const { authenticate } = require('../middleware/middleware_v2');
 router.get('/', authenticate, async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      `SELECT o.*, json_agg(oi.*) AS items
+      `SELECT o.*, COALESCE(json_agg(oi.*) FILTER (WHERE oi.id IS NOT NULL), '[]'::json) AS items
        FROM orders o LEFT JOIN order_items oi ON oi.order_id=o.id
        WHERE o.user_id=$1 GROUP BY o.id ORDER BY o.created_at DESC`,
       [req.user.id]

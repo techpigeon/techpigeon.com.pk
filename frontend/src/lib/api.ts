@@ -37,6 +37,7 @@ export const hostingApi = {
   plans:         ()           => api.get('/hosting/plans'),
   subscriptions: ()           => api.get('/hosting/subscriptions'),
   subscribe:     (data: any)  => api.post('/hosting/subscribe', data),
+  update:        (id: string, data: any) => api.patch(`/hosting/subscriptions/${id}`, data),
   cancel:        (id: string) => api.patch(`/hosting/subscriptions/${id}/cancel`),
 };
 export const coursesApi = {

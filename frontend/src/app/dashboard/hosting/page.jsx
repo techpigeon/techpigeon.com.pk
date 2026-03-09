@@ -20,7 +20,9 @@ export default function HostingPage() {
   const [subs, setSubs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
+  const [ok, setOk] = useState('');
   const [filter, setFilter] = useState('all');
+  const [workingId, setWorkingId] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -37,6 +39,36 @@ export default function HostingPage() {
 
   useEffect(() => { load(); }, []);
 
+  const toggleAutoRenew = async (id, enabled) => {
+    setErr('');
+    setOk('');
+    setWorkingId(id);
+    try {
+      await hostingApi.update(id, { auto_renew: enabled });
+      setOk(`Auto renew ${enabled ? 'enabled' : 'disabled'} successfully.`);
+      await load();
+    } catch (e) {
+      setErr(e.response?.data?.error || 'Failed to update auto renew setting.');
+    } finally {
+      setWorkingId('');
+    }
+  };
+
+  const cancelSub = async (id) => {
+    setErr('');
+    setOk('');
+    setWorkingId(id);
+    try {
+      await hostingApi.cancel(id);
+      setOk('Hosting subscription cancelled.');
+      await load();
+    } catch (e) {
+      setErr(e.response?.data?.error || 'Failed to cancel hosting subscription.');
+    } finally {
+      setWorkingId('');
+    }
+  };
+
   const filtered = useMemo(() => filter === 'all' ? subs : subs.filter(s => s.status === filter), [subs, filter]);
 
   return (
@@ -50,6 +82,7 @@ export default function HostingPage() {
       </div>
 
       {err && <Alert type="error">{err}</Alert>}
+      {ok && <Alert type="success">{ok}</Alert>}
 
       <div className="flex gap-2 mb-5 flex-wrap">
         {['all', 'active', 'pending', 'suspended'].map(f => (
@@ -65,16 +98,17 @@ export default function HostingPage() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50">
               <tr>
-                {['Plan', 'Domain', 'Status', 'Billing', 'Renews', 'Auto Renew'].map(h => (
+                {['Plan', 'Domain', 'Status', 'Billing', 'Renews', 'Auto Renew', 'Manage'].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase border-b border-slate-200">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {loading && <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">Loading hosting subscriptions...</td></tr>}
-              {!loading && filtered.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">No hosting subscriptions found.</td></tr>}
+              {loading && <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">Loading hosting subscriptions...</td></tr>}
+              {!loading && filtered.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">No hosting subscriptions found.</td></tr>}
               {!loading && filtered.map(s => {
                 const st = STATUS_MAP[s.status] || STATUS_MAP.pending;
+                const busy = workingId === s.id;
                 return (
                   <tr key={s.id} className="border-b border-slate-100">
                     <td className="px-4 py-3.5 font-semibold text-[#1d1d1d]">{s.plan_name || '-'}</td>
@@ -83,6 +117,14 @@ export default function HostingPage() {
                     <td className="px-4 py-3.5 text-slate-600 capitalize">{s.billing_cycle || '-'}</td>
                     <td className="px-4 py-3.5 text-slate-500 text-xs">{s.current_period_end ? new Date(s.current_period_end).toLocaleDateString('en-PK') : '-'}</td>
                     <td className="px-4 py-3.5 text-xs font-semibold text-slate-600">{s.auto_renew ? 'On' : 'Off'}</td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex gap-2 flex-wrap">
+                        <Button size="sm" variant="outline" disabled={busy} onClick={() => toggleAutoRenew(s.id, !s.auto_renew)}>
+                          {s.auto_renew ? 'Disable Auto-Renew' : 'Enable Auto-Renew'}
+                        </Button>
+                        {s.status !== 'cancelled' && <Button size="sm" variant="danger" loading={busy} onClick={() => cancelSub(s.id)}>Cancel</Button>}
+                      </div>
+                    </td>
                   </tr>
                 );
               })}

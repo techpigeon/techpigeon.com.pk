@@ -32,6 +32,7 @@ export default function TrainingPage() {
       const pending = (oRes.data.orders || [])
         .filter(o => o.status === 'pending')
         .flatMap(o => (Array.isArray(o.items) ? o.items : []))
+        .filter(Boolean)
         .filter(i => i.item_type === 'course')
         .map(i => ({
           id: i.id,

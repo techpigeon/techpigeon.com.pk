@@ -20,10 +20,12 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
+  const [ok, setOk] = useState('');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [workingId, setWorkingId] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -56,6 +58,36 @@ export default function OrdersPage() {
   const from = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const to = Math.min(page * PAGE_SIZE, total);
 
+  const updateStatus = async (id, nextStatus) => {
+    setErr('');
+    setOk('');
+    setWorkingId(id);
+    try {
+      await adminApi.updateOrder(id, { status: nextStatus, paid_at: nextStatus === 'paid' ? new Date().toISOString() : undefined });
+      setOk(`Order status updated to ${nextStatus}.`);
+      await load();
+    } catch (e) {
+      setErr(e.response?.data?.error || 'Failed to update order status.');
+    } finally {
+      setWorkingId('');
+    }
+  };
+
+  const deleteOrder = async (id) => {
+    setErr('');
+    setOk('');
+    setWorkingId(id);
+    try {
+      await adminApi.deleteOrder(id);
+      setOk('Order deleted successfully.');
+      await load();
+    } catch (e) {
+      setErr(e.response?.data?.error || 'Failed to delete order.');
+    } finally {
+      setWorkingId('');
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center gap-3 mb-6">
@@ -64,6 +96,7 @@ export default function OrdersPage() {
       </div>
 
       {err && <Alert type="error">{err}</Alert>}
+      {ok && <Alert type="success">{ok}</Alert>}
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <div className="bg-white border border-slate-200 rounded-2xl p-5"><p className="text-xs text-slate-400">Total Orders</p><p className="text-2xl text-[#bba442]" style={{ fontFamily: "'Aleo',serif" }}>{orders.length}</p></div>
@@ -88,16 +121,17 @@ export default function OrdersPage() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50">
               <tr>
-                {['Order', 'Customer', 'Amount', 'Status', 'Date'].map(h => (
+                {['Order', 'Customer', 'Amount', 'Status', 'Date', 'Manage'].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase border-b border-slate-200">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {loading && <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-400">Loading...</td></tr>}
-              {!loading && orders.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-400">No orders found.</td></tr>}
+              {loading && <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">Loading...</td></tr>}
+              {!loading && orders.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">No orders found.</td></tr>}
               {!loading && orders.map(o => {
                 const st = STATUS_MAP[o.status] || STATUS_MAP.pending;
+                const busy = workingId === o.id;
                 return (
                   <tr key={o.id} className="border-b border-slate-100">
                     <td className="px-4 py-3.5 font-semibold text-[#1d1d1d]">{o.order_number || o.id.slice(0, 8)}</td>
@@ -105,6 +139,13 @@ export default function OrdersPage() {
                     <td className="px-4 py-3.5 font-semibold">Rs.{Number(o.total_pkr || 0).toLocaleString('en-PK')}</td>
                     <td className="px-4 py-3.5"><Badge variant={st.variant}>{st.label}</Badge></td>
                     <td className="px-4 py-3.5 text-xs text-slate-400">{o.created_at ? new Date(o.created_at).toLocaleString('en-PK') : '-'}</td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex gap-2 flex-wrap">
+                        {o.status !== 'paid' && <Button size="sm" variant="success" loading={busy} onClick={() => updateStatus(o.id, 'paid')}>Mark Paid</Button>}
+                        {o.status !== 'cancelled' && <Button size="sm" variant="outline" disabled={busy} onClick={() => updateStatus(o.id, 'cancelled')}>Cancel</Button>}
+                        <Button size="sm" variant="danger" loading={busy} onClick={() => deleteOrder(o.id)}>Delete</Button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}

@@ -21,7 +21,9 @@ export default function DomainsPage() {
   const [domains, setDomains] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
+  const [ok, setOk] = useState('');
   const [filter, setFilter] = useState('all');
+  const [workingId, setWorkingId] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -38,6 +40,36 @@ export default function DomainsPage() {
 
   useEffect(() => { load(); }, []);
 
+  const updateDomain = async (id, payload, successMsg) => {
+    setErr('');
+    setOk('');
+    setWorkingId(id);
+    try {
+      await domainsApi.update(id, payload);
+      setOk(successMsg);
+      await load();
+    } catch (e) {
+      setErr(e.response?.data?.error || 'Failed to update domain settings.');
+    } finally {
+      setWorkingId('');
+    }
+  };
+
+  const renewDomain = async (id) => {
+    setErr('');
+    setOk('');
+    setWorkingId(id);
+    try {
+      await domainsApi.renew(id);
+      setOk('Domain renewed successfully.');
+      await load();
+    } catch (e) {
+      setErr(e.response?.data?.error || 'Failed to renew domain.');
+    } finally {
+      setWorkingId('');
+    }
+  };
+
   const filtered = useMemo(() => filter === 'all' ? domains : domains.filter(d => d.status === filter), [domains, filter]);
 
   return (
@@ -51,6 +83,7 @@ export default function DomainsPage() {
       </div>
 
       {err && <Alert type="error">{err}</Alert>}
+      {ok && <Alert type="success">{ok}</Alert>}
 
       <div className="flex gap-2 mb-5 flex-wrap">
         {['all', 'active', 'pending', 'expired'].map(f => (
@@ -66,16 +99,17 @@ export default function DomainsPage() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50">
               <tr>
-                {['Domain', 'Status', 'Registered', 'Expires', 'Price', 'Auto Renew'].map(h => (
+                {['Domain', 'Status', 'Registered', 'Expires', 'Price', 'Auto Renew', 'Manage'].map(h => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase border-b border-slate-200">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {loading && <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">Loading domains...</td></tr>}
-              {!loading && filtered.length === 0 && <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">No domains found.</td></tr>}
+              {loading && <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">Loading domains...</td></tr>}
+              {!loading && filtered.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">No domains found.</td></tr>}
               {!loading && filtered.map(d => {
                 const st = STATUS_MAP[d.status] || STATUS_MAP.pending;
+                const busy = workingId === d.id;
                 return (
                   <tr key={d.id} className="border-b border-slate-100">
                     <td className="px-4 py-3.5 font-semibold text-[#1d1d1d]">{d.full_domain || `${d.domain_name}${d.tld}`}</td>
@@ -84,6 +118,17 @@ export default function DomainsPage() {
                     <td className="px-4 py-3.5 text-slate-500 text-xs">{d.expires_at ? new Date(d.expires_at).toLocaleDateString('en-PK') : '-'}</td>
                     <td className="px-4 py-3.5 font-semibold">Rs.{Number(d.price_pkr || 0).toLocaleString('en-PK')}</td>
                     <td className="px-4 py-3.5 text-xs font-semibold text-slate-600">{d.auto_renew ? 'On' : 'Off'}</td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex gap-2 flex-wrap">
+                        <Button size="sm" variant="outline" disabled={busy} onClick={() => updateDomain(d.id, { auto_renew: !d.auto_renew }, `Auto renew ${d.auto_renew ? 'disabled' : 'enabled'} for ${d.full_domain || d.domain_name}.`)}>
+                          {d.auto_renew ? 'Disable Auto-Renew' : 'Enable Auto-Renew'}
+                        </Button>
+                        <Button size="sm" variant="outline" disabled={busy} onClick={() => updateDomain(d.id, { whois_privacy: !d.whois_privacy }, `WHOIS privacy ${d.whois_privacy ? 'disabled' : 'enabled'} for ${d.full_domain || d.domain_name}.`)}>
+                          {d.whois_privacy ? 'Disable WHOIS' : 'Enable WHOIS'}
+                        </Button>
+                        <Button size="sm" loading={busy} onClick={() => renewDomain(d.id)}>Renew</Button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}

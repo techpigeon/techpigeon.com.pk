@@ -2,9 +2,13 @@
 export const dynamic = 'force-dynamic';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Footer from '../../components/layout/Footer';
+import Button from '../../components/ui/Button';
+import Alert from '../../components/ui/Alert';
 import { useCourses, usePageContent } from '../../lib/useContent';
+import { coursesApi } from '../../lib/api';
+import { useAuth } from '../../context/AuthContext';
 
 // ─── Derived look-ups ──────────────────────────────────────────────
 const INSTRUCTOR_MAP = {
@@ -41,10 +45,33 @@ const CATEGORIES = ['All', 'Cloud', 'Security', 'Networking', 'DevOps', 'Linux']
 
 // ─── Main Page Component ───────────────────────────────────────────
 export default function TrainingCatalogPage() {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const { courses } = useCourses();
   const { sections } = usePageContent('training');
   const hero = sections.hero || {};
   const [activeCat, setActiveCat] = useState('All');
+  const [actionErr, setActionErr] = useState('');
+  const [busyId, setBusyId] = useState(null);
+
+  const handleEnroll = async (courseId) => {
+    setActionErr('');
+    if (!isAuthenticated) {
+      router.push(`/auth/login?redirect=${encodeURIComponent('/training')}`);
+      return;
+    }
+
+    setBusyId(courseId);
+    try {
+      const { data } = await coursesApi.enroll(courseId);
+      const orderId = data?.order?.id;
+      router.push(orderId ? `/dashboard/billing?order=${orderId}` : '/dashboard/billing');
+    } catch (e) {
+      setActionErr(e.response?.data?.error || 'Unable to create course order.');
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   const filtered =
     activeCat === 'All'
@@ -125,6 +152,7 @@ export default function TrainingCatalogPage() {
       {/* ── Course Cards Grid ──────────────────────────────────── */}
       <section className="py-16 px-5">
         <div className="max-w-7xl mx-auto">
+          {actionErr && <Alert type="error">{actionErr}</Alert>}
           {filtered.length === 0 ? (
             <div className="bg-white border border-slate-200 rounded-2xl p-16 text-center">
               <div className="text-5xl mb-4">🎓</div>
@@ -159,11 +187,7 @@ export default function TrainingCatalogPage() {
                 const levelStyle = LEVEL_STYLES[normalizedLevel] || LEVEL_STYLES.Beginner;
 
                 return (
-                  <Link
-                    key={course.id}
-                    href="/auth/register"
-                    className="no-underline group"
-                  >
+                  <div key={course.id} className="no-underline group">
                     <div
                       className="bg-white border border-slate-200 rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col h-full"
                     >
@@ -265,7 +289,7 @@ export default function TrainingCatalogPage() {
                         </div>
 
                         {/* Price */}
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2">
                           <div>
                             <span
                               className="text-xl font-bold"
@@ -286,19 +310,17 @@ export default function TrainingCatalogPage() {
                               PKR
                             </span>
                           </div>
-                          <span
-                            className="text-xs font-semibold transition-colors duration-200 group-hover:text-[#5cc4eb]"
-                            style={{
-                                fontFamily: 'var(--font-body, Open Sans, sans-serif)',
-                                color: '#bba442',
-                              }}
-                            >
-                            Enroll Now &rarr;
-                          </span>
+                          <Button
+                            size="sm"
+                            loading={busyId === course.id}
+                            onClick={() => handleEnroll(course.id)}
+                          >
+                            {isAuthenticated ? 'Enroll Now' : 'Login to Enroll'}
+                          </Button>
                         </div>
                       </div>
                     </div>
-                  </Link>
+                  </div>
                 );
               })}
             </div>
