@@ -9,7 +9,22 @@ const { errorHandler } = require('./middleware/middleware_v2');
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: process.env.FRONTEND_URL || '*', credentials: true }));
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.FRONTEND_URL_ALT,
+  process.env.FRONTEND_PREVIEW_URL,
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    if (!allowedOrigins.length) return cb(null, true);
+    return allowedOrigins.includes(origin)
+      ? cb(null, true)
+      : cb(new Error('CORS blocked: origin not allowed'));
+  },
+  credentials: true,
+}));
 app.use(morgan('dev'));
 
 // Stripe webhook needs raw body — mount BEFORE json parser

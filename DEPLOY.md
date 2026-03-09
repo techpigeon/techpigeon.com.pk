@@ -23,7 +23,9 @@
    DATABASE_URL=postgresql://...   (from Neon)
    JWT_SECRET=your_random_64_char_string
    JWT_EXPIRES_IN=7d
-   FRONTEND_URL=https://your-frontend.vercel.app
+   FRONTEND_URL=https://techpigeon-com-pk-frontend1.vercel.app
+   FRONTEND_URL_ALT=https://www.techpigeon-com-pk-frontend1.vercel.app
+   FRONTEND_PREVIEW_URL=https://techpigeon-com-pk-frontend1.vercel.app
    SMTP_HOST=smtp.resend.com
    SMTP_PORT=587
    SMTP_USER=resend
@@ -40,17 +42,17 @@
    EASYPAISA_HASH_KEY=...
    EASYPAISA_URL=https://easypay.easypaisa.com.pk/tpay/InitPaymentService
    ```
-6. Deploy → Note your backend URL: https://techpigeon-backend.vercel.app
+6. Deploy → Note your backend URL: https://techpigeon-com-pk-backend.vercel.app
 
 ## ─── STEP 3: Deploy Frontend to Vercel ───────────────────────
 1. Go to Vercel → New Project → Same GitHub repo
 2. Set Root Directory: `frontend`
 3. Add Environment Variables:
    ```
-   NEXT_PUBLIC_API_URL=https://techpigeon-backend.vercel.app/api
+   NEXT_PUBLIC_API_URL=https://techpigeon-com-pk-backend.vercel.app/api
    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
    ```
-4. Deploy → Your site: https://techpigeon.vercel.app
+4. Deploy → Your site: https://techpigeon-com-pk-frontend1.vercel.app
 
 ## ─── STEP 4: Custom Domain ───────────────────────────────────
 1. In Vercel frontend project → Settings → Domains
@@ -76,7 +78,7 @@
 1. Create account at https://stripe.com
 2. Get publishable & secret keys from dashboard
 3. Set up webhook: Dashboard → Webhooks → Add endpoint
-   URL: https://techpigeon-backend.vercel.app/api/payments/stripe/webhook
+   URL: https://techpigeon-com-pk-backend.vercel.app/api/payments/stripe/webhook
    Events: payment_intent.succeeded, payment_intent.payment_failed
 
 ## ─── ADMIN ACCESS ────────────────────────────────────────────

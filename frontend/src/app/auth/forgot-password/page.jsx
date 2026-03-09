@@ -7,16 +7,29 @@ import Logo from '../../../components/ui/Logo';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import Alert from '../../../components/ui/Alert';
+import { authApi } from '../../../lib/api';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
 
-  const submit = () => {
-    if (!email.includes('@')) return;
+  const submit = async () => {
+    if (!email.includes('@')) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    setError('');
     setLoading(true);
-    setTimeout(() => { setLoading(false); setSent(true); }, 900);
+    try {
+      await authApi.forgot(email.trim());
+      setSent(true);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Unable to send reset link right now.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -35,6 +48,7 @@ export default function ForgotPasswordPage() {
             <>
               <h2 style={{ fontFamily: "'Aleo',serif" }} className="text-2xl text-[#bba442] mb-1">Forgot Password?</h2>
               <p className="text-sm text-slate-500 mb-6">Enter your email and we'll send a reset link.</p>
+              {error && <Alert type="error">{error}</Alert>}
               <Input label="Email Address" type="email" value={email} onChange={setEmail} placeholder="you@example.com" icon="📧" />
               <Button full size="lg" loading={loading} onClick={submit}>Send Reset Link</Button>
               <p className="text-center text-sm text-slate-400 mt-4">

@@ -22,7 +22,11 @@ router.post('/register', async (req, res, next) => {
       [first_name.trim(), last_name.trim(), email.toLowerCase().trim(), phone||null, hash]
     );
     await pool.query(`INSERT INTO tokens(user_id,token,type,expires_at) VALUES($1,$2,'email_verify',NOW()+INTERVAL '24 hours')`, [rows[0].id, vtoken]);
-    await sendEmail({ to: email, subject: 'Verify your TechPigeon account', html: `<p>Hi ${first_name},</p><p>Welcome to TechPigeon!</p><p><a href="${process.env.FRONTEND_URL}/auth/verify?token=${vtoken}" style="background:#00A8E8;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block">Verify Email</a></p>` });
+    try {
+      await sendEmail({ to: email, subject: 'Verify your TechPigeon account', html: `<p>Hi ${first_name},</p><p>Welcome to TechPigeon!</p><p><a href="${process.env.FRONTEND_URL}/auth/verify?token=${vtoken}" style="background:#00A8E8;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block">Verify Email</a></p>` });
+    } catch (mailErr) {
+      console.error('Email send failed during register:', mailErr.message);
+    }
     res.status(201).json({ message: 'Account created! Check your email to verify.', token: sign(rows[0].id, rows[0].role), user: rows[0] });
   } catch(e) { next(e); }
 });
@@ -35,7 +39,7 @@ router.post('/login', async (req, res, next) => {
     if (!rows.length) return res.status(401).json({ error: 'Invalid email or password.' });
     if (!rows[0].is_active) return res.status(403).json({ error: 'Account suspended. Contact support.' });
     if (!await bcrypt.compare(password, rows[0].password_hash)) return res.status(401).json({ error: 'Invalid email or password.' });
-    await pool.query('UPDATE users SET last_login=NOW() WHERE id=$1', [rows[0].id]);
+    await pool.query('UPDATE users SET last_login_at=NOW() WHERE id=$1', [rows[0].id]);
     const { password_hash, ...user } = rows[0];
     res.json({ token: sign(user.id, user.role), user });
   } catch(e) { next(e); }
@@ -60,7 +64,11 @@ router.post('/forgot-password', async (req, res, next) => {
     if (rows.length) {
       const t = crypto.randomBytes(32).toString('hex');
       await pool.query(`INSERT INTO tokens(user_id,token,type,expires_at) VALUES($1,$2,'password_reset',NOW()+INTERVAL '1 hour')`, [rows[0].id, t]);
-      await sendEmail({ to: email, subject: 'Reset your TechPigeon password', html: `<p>Hi ${rows[0].first_name},</p><p><a href="${process.env.FRONTEND_URL}/auth/reset-password?token=${t}" style="background:#00A8E8;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block">Reset Password</a></p><p>Expires in 1 hour.</p>` });
+      try {
+        await sendEmail({ to: email, subject: 'Reset your TechPigeon password', html: `<p>Hi ${rows[0].first_name},</p><p><a href="${process.env.FRONTEND_URL}/auth/reset-password?token=${t}" style="background:#00A8E8;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;display:inline-block">Reset Password</a></p><p>Expires in 1 hour.</p>` });
+      } catch (mailErr) {
+        console.error('Email send failed during forgot-password:', mailErr.message);
+      }
     }
     res.json({ message: 'If that email exists, a reset link has been sent.' });
   } catch(e) { next(e); }

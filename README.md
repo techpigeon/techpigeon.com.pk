@@ -32,6 +32,10 @@ npm install && npm run dev
 4. Set root to `backend/` for backend deployment (separate project)
 5. Add all env variables from `.env.example` files
 
+## Current Deployment URLs
+- Frontend: `https://techpigeon-com-pk-frontend1.vercel.app`
+- Backend API: `https://techpigeon-com-pk-backend.vercel.app/api`
+
 ## Admin Access
 After running DB migrations, seed an admin user:
 ```bash
