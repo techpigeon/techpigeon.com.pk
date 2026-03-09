@@ -13,9 +13,9 @@ export default function Logo({
 }) {
   const { s } = useSite();
   const dim = {
-    sm: { w: 120, h: 28, f: '1.05rem' },
-    md: { w: 170, h: 40, f: '1.4rem' },
-    lg: { w: 220, h: 52, f: '1.75rem' }
+    sm: { w: 140, h: 34, f: '1.05rem' },
+    md: { w: 210, h: 48, f: '1.4rem' },
+    lg: { w: 260, h: 58, f: '1.75rem' }
   }[size];
 
   const textColor   = variant === 'white' ? '#ffffff' : '#1d1d1d';

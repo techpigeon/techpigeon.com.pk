@@ -53,7 +53,7 @@ export default function Navbar() {
     <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-5 flex items-center justify-between h-16">
         {/* ── Logo ── */}
-        <Logo size="md" />
+        <Logo size="lg" />
 
         {/* ── Primary nav links (desktop) ── */}
         <div className="hidden md:flex items-center gap-1">
