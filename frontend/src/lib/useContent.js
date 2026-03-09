@@ -66,7 +66,22 @@ const FALLBACK_NAV = NAV_LINKS.map((l, i) => ({
   label: l.label,
   href: l.href,
   position: i <= 4 ? 'primary' : 'secondary',
+  link_type: 'main',
+  parent_id: null,
 }));
+
+const FALLBACK_PROJECTS = [
+  {
+    id: 'proj-1',
+    project_id: 'TP-PROJ-001',
+    project_name: 'AI Bootcamp Management Portal',
+    project_start_date: '2025-01-10',
+    project_close_date: '2025-07-30',
+    project_status: 'active',
+    project_url: 'https://www.techpigeon.com.pk',
+    show_on_homepage: true,
+  },
+];
 
 const FALLBACK_FOOTER = FOOTER_COLS.map((c, i) => ({
   id: `foot-${i}`,
@@ -166,6 +181,18 @@ export function useNavLinks() {
       .finally(() => setLoading(false));
   }, []);
   return { links, loading };
+}
+
+export function useProjects(homepage) {
+  const [projects, setProjects] = useState(FALLBACK_PROJECTS);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    contentApi.getProjects(homepage)
+      .then(r => setProjects(r.data.projects?.length ? r.data.projects : FALLBACK_PROJECTS))
+      .catch(() => setProjects(FALLBACK_PROJECTS))
+      .finally(() => setLoading(false));
+  }, [homepage]);
+  return { projects, loading };
 }
 
 export function useFooterColumns() {

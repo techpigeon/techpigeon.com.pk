@@ -69,10 +69,32 @@ export const ticketsApi = {
 export const adminApi = {
   stats:       ()                              => api.get('/admin/stats'),
   users:       (p?: any)                       => api.get('/admin/users', { params: p }),
+  createUser:  (data: any)                     => api.post('/admin/users', data),
   updateUser:  (id: string, data: any)         => api.patch(`/admin/users/${id}`, data),
+  deleteUser:  (id: string)                    => api.delete(`/admin/users/${id}`),
+  userDetail:  (id: string)                    => api.get(`/admin/users/${id}`),
+  resetUserPassword: (id: string, newPassword: string) => api.post(`/admin/users/${id}/reset-password`, { new_password: newPassword }),
   orders:      (p?: any)                       => api.get('/admin/orders', { params: p }),
+  createOrder: (data: any)                     => api.post('/admin/orders', data),
+  updateOrder: (id: string, data: any)         => api.patch(`/admin/orders/${id}`, data),
+  deleteOrder: (id: string)                    => api.delete(`/admin/orders/${id}`),
   payments:    (p?: any)                       => api.get('/admin/payments', { params: p }),
+  createPayment: (data: any)                   => api.post('/admin/payments', data),
+  updatePayment: (id: string, data: any)       => api.patch(`/admin/payments/${id}`, data),
+  deletePayment: (id: string)                  => api.delete(`/admin/payments/${id}`),
   confirmPay:  (id: string)                    => api.post(`/payments/admin/confirm/${id}`),
+  domains:     (p?: any)                       => api.get('/admin/domains', { params: p }),
+  createDomain:(data: any)                     => api.post('/admin/domains', data),
+  updateDomain:(id: string, data: any)         => api.patch(`/admin/domains/${id}`, data),
+  deleteDomain:(id: string)                    => api.delete(`/admin/domains/${id}`),
+  hosting:     ()                              => api.get('/admin/hosting'),
+  createHosting:(data: any)                    => api.post('/admin/hosting', data),
+  updateHosting:(id: string, data: any)        => api.patch(`/admin/hosting/${id}`, data),
+  deleteHosting:(id: string)                   => api.delete(`/admin/hosting/${id}`),
+  projects:    (p?: any)                       => api.get('/admin/projects', { params: p }),
+  createProject:(data: any)                    => api.post('/admin/projects', data),
+  updateProject:(id: string, data: any)        => api.patch(`/admin/projects/${id}`, data),
+  deleteProject:(id: string)                   => api.delete(`/admin/projects/${id}`),
   tickets:     (p?: any)                       => api.get('/admin/tickets', { params: p }),
   replyTicket: (id: string, msg: string, st: string) => api.post(`/admin/tickets/${id}/reply`, { message: msg, status: st }),
 };
@@ -89,6 +111,8 @@ export const contentApi = {
   getFooter:       ()                  => api.get('/content/footer'),
   getHostingPlans: ()                  => api.get('/content/hosting-plans'),
   getCourses:      ()                  => api.get('/content/courses'),
+  getProjects:     (homepage?: boolean)=> api.get('/content/projects', { params: homepage === undefined ? {} : { homepage } }),
+  verifyProject:   (projectId: string) => api.get(`/content/verification/${encodeURIComponent(projectId)}`),
 };
 
 // ── CMS Admin API (requires admin auth) ──
@@ -124,7 +148,14 @@ export const siteAdminApi = {
   deleteTld:        (id: string)                    => api.delete(`/admin/site/tlds/${id}`),
   // Nav
   getNav:           ()                              => api.get('/admin/site/nav'),
+  createNav:        (data: any)                     => api.post('/admin/site/nav', data),
   updateNav:        (id: string, data: any)         => api.put(`/admin/site/nav/${id}`, data),
+  deleteNav:        (id: string)                    => api.delete(`/admin/site/nav/${id}`),
+  // Pages
+  getPages:         ()                              => api.get('/admin/site/pages'),
+  createPage:       (data: any)                     => api.post('/admin/site/pages', data),
+  updatePage:       (id: string, data: any)         => api.patch(`/admin/site/pages/${id}`, data),
+  deletePage:       (id: string)                    => api.delete(`/admin/site/pages/${id}`),
   // Footer
   getFooter:        ()                              => api.get('/admin/site/footer'),
   updateFooter:     (id: string, data: any)         => api.put(`/admin/site/footer/${id}`, data),

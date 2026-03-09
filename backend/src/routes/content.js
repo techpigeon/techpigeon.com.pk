@@ -5,6 +5,29 @@
 const router = require('express').Router();
 const { pool } = require('../db');
 
+let projectsReady = false;
+async function ensureProjectsTable() {
+  if (projectsReady) return;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS projects (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      project_id VARCHAR(50) UNIQUE NOT NULL,
+      project_name VARCHAR(255) NOT NULL,
+      project_start_date DATE,
+      project_close_date DATE,
+      project_status VARCHAR(30) NOT NULL DEFAULT 'active',
+      project_url TEXT,
+      is_published BOOLEAN DEFAULT true,
+      is_archived BOOLEAN DEFAULT false,
+      show_on_homepage BOOLEAN DEFAULT false,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      CONSTRAINT projects_status_check CHECK (project_status IN ('planning','active','on_hold','completed','cancelled'))
+    )
+  `);
+  projectsReady = true;
+}
+
 // ── GET /api/content/settings — all site settings ──
 router.get('/settings', async (req, res, next) => {
   try {
@@ -67,7 +90,7 @@ router.get('/tlds', async (req, res, next) => {
 // ── GET /api/content/nav — navigation links ──
 router.get('/nav', async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT id, label, href, position FROM nav_links WHERE is_visible=true ORDER BY sort_order');
+    const { rows } = await pool.query('SELECT id, label, href, position, parent_id, link_type, is_published, sort_order FROM nav_links WHERE is_visible=true AND COALESCE(is_published,true)=true ORDER BY sort_order');
     res.json({ links: rows });
   } catch (e) { next(e); }
 });
@@ -93,6 +116,43 @@ router.get('/courses', async (req, res, next) => {
   try {
     const { rows } = await pool.query('SELECT id, title, slug, short_desc, level, category, thumbnail_url, price_pkr, duration_hours, total_modules, instructor_name, cert_included FROM courses WHERE is_published=true ORDER BY sort_order, created_at DESC');
     res.json({ courses: rows });
+  } catch (e) { next(e); }
+});
+
+// ── GET /api/content/projects — public published projects ──
+router.get('/projects', async (req, res, next) => {
+  try {
+    await ensureProjectsTable();
+    const { homepage } = req.query;
+    const params = [];
+    let where = `is_published=true AND is_archived=false`;
+    if (homepage === 'true') {
+      where += ' AND show_on_homepage=true';
+    }
+    const { rows } = await pool.query(
+      `SELECT id, project_id, project_name, project_start_date, project_close_date, project_status, project_url, show_on_homepage
+       FROM projects WHERE ${where} ORDER BY created_at DESC`,
+      params
+    );
+    res.json({ projects: rows });
+  } catch (e) { next(e); }
+});
+
+// ── GET /api/content/verification/:projectId — project verification ──
+router.get('/verification/:projectId', async (req, res, next) => {
+  try {
+    await ensureProjectsTable();
+    const code = String(req.params.projectId || '').trim();
+    if (!code) return res.status(400).json({ error: 'Project ID is required.' });
+    const { rows } = await pool.query(
+      `SELECT project_id, project_name, project_start_date, project_close_date, project_status, project_url
+       FROM projects
+       WHERE project_id=$1 AND is_published=true AND is_archived=false
+       LIMIT 1`,
+      [code]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Project not found or not published.' });
+    res.json({ project: rows[0], verified: true });
   } catch (e) { next(e); }
 });
 

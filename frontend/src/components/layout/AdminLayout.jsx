@@ -9,6 +9,7 @@ const LINKS=[
   {href:'/admin/payments',icon:'💳',label:'Payments'},
   {href:'/admin/domains',icon:'🌐',label:'Domains'},
   {href:'/admin/hosting',icon:'☁️',label:'Hosting'},
+  {href:'/admin/projects',icon:'🧩',label:'Projects'},
   {href:'/admin/courses',icon:'🎓',label:'Courses'},
   {href:'/admin/tickets',icon:'🎫',label:'Tickets'},
   {href:'/admin/content',icon:'📝',label:'Content'},

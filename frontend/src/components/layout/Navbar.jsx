@@ -13,7 +13,9 @@ const DEFAULT_LINKS = [
   { label: 'Domains', href: '/domains', position: 'primary' },
   { label: 'Cloud Hosting', href: '/hosting', position: 'primary' },
   { label: 'Training', href: '/training', position: 'primary' },
+  { label: 'Projects', href: '/projects', position: 'primary' },
   { label: 'About', href: '/about', position: 'secondary' },
+  { label: 'Verification', href: '/verification', position: 'secondary' },
   { label: 'Contact', href: '/contact', position: 'secondary' },
 ];
 
@@ -25,8 +27,13 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const navLinks = links?.length ? links : DEFAULT_LINKS;
-  const primaryLinks = navLinks.filter((l) => l.position === 'primary');
-  const secondaryLinks = navLinks.filter((l) => l.position === 'secondary');
+  const mainLinks = navLinks.filter((l) => (l.link_type || 'main') === 'main');
+  const mergedMain = [...mainLinks];
+  for (const d of DEFAULT_LINKS) {
+    if (!mergedMain.some((l) => l.href === d.href)) mergedMain.push(d);
+  }
+  const primaryLinks = mergedMain.filter((l) => l.position === 'primary');
+  const secondaryLinks = mergedMain.filter((l) => l.position === 'secondary');
 
   const isActive = (href) =>
     href === '/'

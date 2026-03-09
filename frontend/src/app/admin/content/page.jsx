@@ -6,6 +6,8 @@ import Button from '../../../components/ui/Button';
 
 const TABS = [
   { id: 'sections', label: 'Page Sections' },
+  { id: 'pages', label: 'Blank Pages' },
+  { id: 'nav', label: 'Navigation' },
   { id: 'services', label: 'Services' },
   { id: 'ventures', label: 'Ventures' },
   { id: 'partners', label: 'Partners' },
@@ -101,6 +103,8 @@ export default function ContentPage() {
       </div>
 
       {tab === 'sections' && <SectionsTab flash={flash} />}
+      {tab === 'pages' && <PagesTab flash={flash} />}
+      {tab === 'nav' && <NavTab flash={flash} />}
       {tab === 'services' && <CrudTab entity="services" nameKey="title" flash={flash} fields={['title','description','icon','href']} />}
       {tab === 'ventures' && <CrudTab entity="ventures" nameKey="name" flash={flash} fields={['name','tagline','description','category']} />}
       {tab === 'partners' && <CrudTab entity="partners" nameKey="name" flash={flash} fields={['name','logo_url','website','description']} />}
@@ -114,6 +118,8 @@ function SectionsTab({ flash }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState(null);
+  const [showNew, setShowNew] = useState(false);
+  const [newSection, setNewSection] = useState({ page: '', section_key: '', title: '', subtitle: '', content: '', data: '{}', sort_order: 0, is_visible: true, status: 'draft', is_archived: false, show_on_homepage: false });
 
   useEffect(() => {
     siteAdminApi.getSections().then(r => setItems(r.data.sections)).catch(() => flash('error', 'Failed to load.')).finally(() => setLoading(false));
@@ -126,7 +132,17 @@ function SectionsTab({ flash }) {
     try {
       let dataObj = item.data;
       if (typeof item._dataStr === 'string') dataObj = JSON.parse(item._dataStr);
-      await siteAdminApi.updateSection(item.id, { title: item.title, subtitle: item.subtitle, content: item.content, data: dataObj, is_visible: item.is_visible, sort_order: item.sort_order });
+      await siteAdminApi.updateSection(item.id, {
+        title: item.title,
+        subtitle: item.subtitle,
+        content: item.content,
+        data: dataObj,
+        is_visible: item.is_visible,
+        sort_order: item.sort_order,
+        status: item.status,
+        is_archived: item.is_archived,
+        show_on_homepage: item.show_on_homepage,
+      });
       flash('success', 'Section updated!');
     } catch (e) { flash('error', e.message?.includes('JSON') ? 'Invalid JSON in data field.' : 'Failed to save.'); }
     finally { setSavingId(null); }
@@ -134,11 +150,63 @@ function SectionsTab({ flash }) {
 
   if (loading) return <Spinner />;
 
+  const createSection = async () => {
+    if (!newSection.page || !newSection.section_key) {
+      flash('error', 'Page and section key are required.');
+      return;
+    }
+    try {
+      await siteAdminApi.createSection({
+        ...newSection,
+        data: newSection.data ? JSON.parse(newSection.data) : {},
+      });
+      setShowNew(false);
+      setNewSection({ page: '', section_key: '', title: '', subtitle: '', content: '', data: '{}', sort_order: 0, is_visible: true, status: 'draft', is_archived: false, show_on_homepage: false });
+      const r = await siteAdminApi.getSections();
+      setItems(r.data.sections);
+      flash('success', 'Section created.');
+    } catch {
+      flash('error', 'Failed to create section. Check JSON field.');
+    }
+  };
+
   const grouped = {};
   for (const s of items) { (grouped[s.page] = grouped[s.page] || []).push(s); }
 
   return (
     <div>
+      <div className="flex justify-end mb-4">
+        <Button size="sm" onClick={() => setShowNew(!showNew)}>{showNew ? 'Cancel' : '+ Add Section'}</Button>
+      </div>
+
+      {showNew && (
+        <div className="bg-white border-2 border-[#5cc4eb] rounded-xl p-5 mb-4">
+          <p className="text-sm font-bold text-[#5cc4eb] mb-3">New Section</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Input label="Page slug" value={newSection.page} onChange={v => setNewSection(p => ({ ...p, page: v.toLowerCase().trim() }))} placeholder="home / about / custom-page" />
+            <Input label="Section key" value={newSection.section_key} onChange={v => setNewSection(p => ({ ...p, section_key: v.trim() }))} placeholder="hero / features / cta" />
+          </div>
+          <Input label="Title" value={newSection.title} onChange={v => setNewSection(p => ({ ...p, title: v }))} />
+          <Input label="Subtitle" value={newSection.subtitle} onChange={v => setNewSection(p => ({ ...p, subtitle: v }))} />
+          <TArea label="Content" value={newSection.content} onChange={v => setNewSection(p => ({ ...p, content: v }))} />
+          <TArea label="Data (JSON)" value={newSection.data} onChange={v => setNewSection(p => ({ ...p, data: v }))} rows={4} mono />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <Input label="Sort" type="number" value={newSection.sort_order} onChange={v => setNewSection(p => ({ ...p, sort_order: parseInt(v) || 0 }))} />
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Status</label>
+              <select value={newSection.status} onChange={e => setNewSection(p => ({ ...p, status: e.target.value }))} className="w-full px-3 py-2 border-2 border-slate-200 rounded text-sm outline-none focus:border-[#5cc4eb]">
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+            <Toggle label="Visible" value={newSection.is_visible} onChange={v => setNewSection(p => ({ ...p, is_visible: v }))} />
+            <Toggle label="Show on Homepage" value={newSection.show_on_homepage} onChange={v => setNewSection(p => ({ ...p, show_on_homepage: v }))} />
+          </div>
+          <Button size="sm" onClick={createSection}>Create Section</Button>
+        </div>
+      )}
+
       {Object.entries(grouped).map(([page, sections]) => (
         <div key={page} className="mb-6">
           <h3 className="text-sm font-bold text-[#5cc4eb] uppercase tracking-wider mb-3">{page} Page</h3>
@@ -150,6 +218,16 @@ function SectionsTab({ flash }) {
               <TArea label="Data (JSON)" value={s._dataStr !== undefined ? s._dataStr : JSON.stringify(s.data, null, 2)} onChange={v => update(s.id, '_dataStr', v)} rows={5} mono />
               <div className="flex items-center gap-4">
                 <Toggle label="Visible" value={s.is_visible} onChange={v => update(s.id, 'is_visible', v)} />
+                <Toggle label="Show on Homepage" value={!!s.show_on_homepage} onChange={v => update(s.id, 'show_on_homepage', v)} />
+                <Toggle label="Archived" value={!!s.is_archived} onChange={v => update(s.id, 'is_archived', v)} />
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Status</label>
+                  <select value={s.status || 'draft'} onChange={e => update(s.id, 'status', e.target.value)} className="px-3 py-2 border-2 border-slate-200 rounded text-sm outline-none focus:border-[#5cc4eb]">
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </div>
                 <Input label="Sort" value={s.sort_order} onChange={v => update(s.id, 'sort_order', parseInt(v) || 0)} type="number" />
               </div>
               <Button size="sm" onClick={() => save(s)} loading={savingId === s.id}>Save Section</Button>
@@ -157,6 +235,269 @@ function SectionsTab({ flash }) {
           ))}
         </div>
       ))}
+    </div>
+  );
+}
+
+/* ═══ Pages Tab (blank pages, publish/archive) ═══════════════ */
+function PagesTab({ flash }) {
+  const [pages, setPages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showNew, setShowNew] = useState(false);
+  const [newPage, setNewPage] = useState({ slug: '', title: '', description: '', status: 'draft', show_in_homepage: false, sort_order: 0 });
+
+  const load = useCallback(() => {
+    setLoading(true);
+    siteAdminApi.getPages().then(r => setPages(r.data.pages || [])).catch(() => flash('error', 'Failed to load pages.')).finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const update = (id, key, val) => setPages(p => p.map(pg => pg.id === id ? { ...pg, [key]: val } : pg));
+
+  const create = async () => {
+    if (!newPage.slug || !newPage.title) return flash('error', 'Slug and title are required.');
+    try {
+      await siteAdminApi.createPage(newPage);
+      setShowNew(false);
+      setNewPage({ slug: '', title: '', description: '', status: 'draft', show_in_homepage: false, sort_order: 0 });
+      load();
+      flash('success', 'Blank page created.');
+    } catch { flash('error', 'Failed to create page.'); }
+  };
+
+  const save = async (page) => {
+    try {
+      await siteAdminApi.updatePage(page.id, {
+        slug: page.slug,
+        title: page.title,
+        description: page.description,
+        status: page.status,
+        show_in_homepage: page.show_in_homepage,
+        sort_order: page.sort_order,
+      });
+      flash('success', 'Page updated.');
+    } catch { flash('error', 'Failed to update page.'); }
+  };
+
+  const del = async (id) => {
+    if (!confirm('Delete page and its sections?')) return;
+    try { await siteAdminApi.deletePage(id); setPages(p => p.filter(pg => pg.id !== id)); flash('success', 'Page deleted.'); }
+    catch { flash('error', 'Failed to delete page.'); }
+  };
+
+  if (loading) return <Spinner />;
+
+  return (
+    <div>
+      <div className="flex justify-end mb-4">
+        <Button size="sm" onClick={() => setShowNew(!showNew)}>{showNew ? 'Cancel' : '+ Add Blank Page'}</Button>
+      </div>
+
+      {showNew && (
+        <div className="bg-white border-2 border-[#5cc4eb] rounded-xl p-5 mb-4">
+          <p className="text-sm font-bold text-[#5cc4eb] mb-3">Create Blank Page</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Input label="Page Slug" value={newPage.slug} onChange={v => setNewPage(p => ({ ...p, slug: v.toLowerCase().replace(/\s+/g, '-') }))} placeholder="new-page" />
+            <Input label="Title" value={newPage.title} onChange={v => setNewPage(p => ({ ...p, title: v }))} placeholder="New Page Title" />
+          </div>
+          <TArea label="Description" value={newPage.description} onChange={v => setNewPage(p => ({ ...p, description: v }))} rows={2} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Status</label>
+              <select value={newPage.status} onChange={e => setNewPage(p => ({ ...p, status: e.target.value }))} className="w-full px-3 py-2 border-2 border-slate-200 rounded text-sm outline-none focus:border-[#5cc4eb]">
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+            <Input label="Sort Order" type="number" value={newPage.sort_order} onChange={v => setNewPage(p => ({ ...p, sort_order: parseInt(v) || 0 }))} />
+            <Toggle label="Show on Homepage" value={newPage.show_in_homepage} onChange={v => setNewPage(p => ({ ...p, show_in_homepage: v }))} />
+          </div>
+          <Button size="sm" onClick={create}>Create Page</Button>
+        </div>
+      )}
+
+      {pages.map(page => (
+        <ItemCard key={page.id} id={page.id} title={`${page.title} (${page.slug})`} subtitle={`Status: ${page.status}`} onDelete={del}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Input label="Slug" value={page.slug} onChange={v => update(page.id, 'slug', v.toLowerCase().replace(/\s+/g, '-'))} />
+            <Input label="Title" value={page.title} onChange={v => update(page.id, 'title', v)} />
+          </div>
+          <TArea label="Description" value={page.description} onChange={v => update(page.id, 'description', v)} rows={2} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Status</label>
+              <select value={page.status || 'draft'} onChange={e => update(page.id, 'status', e.target.value)} className="w-full px-3 py-2 border-2 border-slate-200 rounded text-sm outline-none focus:border-[#5cc4eb]">
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+            <Input label="Sort Order" type="number" value={page.sort_order} onChange={v => update(page.id, 'sort_order', parseInt(v) || 0)} />
+            <Toggle label="Homepage Visible" value={!!page.show_in_homepage} onChange={v => update(page.id, 'show_in_homepage', v)} />
+          </div>
+          <Button size="sm" onClick={() => save(page)}>Save Page</Button>
+        </ItemCard>
+      ))}
+
+      {pages.length === 0 && <p className="text-center text-slate-400 py-8">No pages created yet.</p>}
+    </div>
+  );
+}
+
+/* ═══ Navigation Tab (main + sub links) ═══════════════════════ */
+function NavTab({ flash }) {
+  const [links, setLinks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showNew, setShowNew] = useState(false);
+  const [newLink, setNewLink] = useState({ label: '', href: '', position: 'primary', link_type: 'main', parent_id: '', sort_order: 0, is_visible: true, is_published: true });
+
+  const load = useCallback(() => {
+    setLoading(true);
+    siteAdminApi.getNav().then(r => setLinks(r.data.links || [])).catch(() => flash('error', 'Failed to load nav links.')).finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const mains = links.filter(l => (l.link_type || 'main') === 'main');
+  const children = links.filter(l => (l.link_type || 'main') === 'sub');
+  const groupedChildren = mains.reduce((acc, m) => ({ ...acc, [m.id]: children.filter(c => c.parent_id === m.id) }), {});
+
+  const update = (id, key, val) => setLinks(p => p.map(l => l.id === id ? { ...l, [key]: val } : l));
+
+  const create = async () => {
+    if (!newLink.label || !newLink.href) return flash('error', 'Label and href are required.');
+    try {
+      await siteAdminApi.createNav({
+        ...newLink,
+        parent_id: newLink.link_type === 'sub' ? (newLink.parent_id || null) : null,
+      });
+      setShowNew(false);
+      setNewLink({ label: '', href: '', position: 'primary', link_type: 'main', parent_id: '', sort_order: 0, is_visible: true, is_published: true });
+      load();
+      flash('success', 'Navigation link created.');
+    } catch { flash('error', 'Failed to create navigation link.'); }
+  };
+
+  const save = async (link) => {
+    try {
+      await siteAdminApi.updateNav(link.id, {
+        label: link.label,
+        href: link.href,
+        position: link.position,
+        link_type: link.link_type || 'main',
+        parent_id: link.link_type === 'sub' ? (link.parent_id || null) : null,
+        is_visible: link.is_visible,
+        is_published: link.is_published,
+        sort_order: link.sort_order,
+      });
+      flash('success', 'Navigation link updated.');
+    } catch { flash('error', 'Failed to update navigation link.'); }
+  };
+
+  const del = async (id) => {
+    if (!confirm('Delete this nav link?')) return;
+    try { await siteAdminApi.deleteNav(id); setLinks(p => p.filter(l => l.id !== id)); flash('success', 'Nav link deleted.'); }
+    catch { flash('error', 'Failed to delete nav link.'); }
+  };
+
+  if (loading) return <Spinner />;
+
+  return (
+    <div>
+      <div className="flex justify-end mb-4">
+        <Button size="sm" onClick={() => setShowNew(!showNew)}>{showNew ? 'Cancel' : '+ Add Nav Link'}</Button>
+      </div>
+
+      {showNew && (
+        <div className="bg-white border-2 border-[#5cc4eb] rounded-xl p-5 mb-4">
+          <p className="text-sm font-bold text-[#5cc4eb] mb-3">New Navigation Link</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Input label="Label" value={newLink.label} onChange={v => setNewLink(p => ({ ...p, label: v }))} />
+            <Input label="Href" value={newLink.href} onChange={v => setNewLink(p => ({ ...p, href: v }))} placeholder="/about or https://..." />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Link Type</label>
+              <select value={newLink.link_type} onChange={e => setNewLink(p => ({ ...p, link_type: e.target.value }))} className="w-full px-3 py-2 border-2 border-slate-200 rounded text-sm outline-none focus:border-[#5cc4eb]">
+                <option value="main">Main Link</option>
+                <option value="sub">Sub Link</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Position</label>
+              <select value={newLink.position} onChange={e => setNewLink(p => ({ ...p, position: e.target.value }))} className="w-full px-3 py-2 border-2 border-slate-200 rounded text-sm outline-none focus:border-[#5cc4eb]">
+                <option value="primary">Primary</option>
+                <option value="secondary">Secondary</option>
+              </select>
+            </div>
+            {newLink.link_type === 'sub' && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Parent Main Link</label>
+                <select value={newLink.parent_id} onChange={e => setNewLink(p => ({ ...p, parent_id: e.target.value }))} className="w-full px-3 py-2 border-2 border-slate-200 rounded text-sm outline-none focus:border-[#5cc4eb]">
+                  <option value="">Select parent</option>
+                  {mains.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Input label="Sort Order" type="number" value={newLink.sort_order} onChange={v => setNewLink(p => ({ ...p, sort_order: parseInt(v) || 0 }))} />
+            <Toggle label="Visible" value={newLink.is_visible} onChange={v => setNewLink(p => ({ ...p, is_visible: v }))} />
+            <Toggle label="Published" value={newLink.is_published} onChange={v => setNewLink(p => ({ ...p, is_published: v }))} />
+          </div>
+          <Button size="sm" onClick={create}>Create Nav Link</Button>
+        </div>
+      )}
+
+      {mains.map(main => (
+        <ItemCard key={main.id} id={main.id} title={main.label} subtitle={`${main.href} • ${main.position}`} onDelete={del}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Input label="Label" value={main.label} onChange={v => update(main.id, 'label', v)} />
+            <Input label="Href" value={main.href} onChange={v => update(main.id, 'href', v)} />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Position</label>
+              <select value={main.position || 'primary'} onChange={e => update(main.id, 'position', e.target.value)} className="w-full px-3 py-2 border-2 border-slate-200 rounded text-sm outline-none focus:border-[#5cc4eb]">
+                <option value="primary">Primary</option>
+                <option value="secondary">Secondary</option>
+              </select>
+            </div>
+            <Input label="Sort" type="number" value={main.sort_order} onChange={v => update(main.id, 'sort_order', parseInt(v) || 0)} />
+            <Toggle label="Visible" value={!!main.is_visible} onChange={v => update(main.id, 'is_visible', v)} />
+            <Toggle label="Published" value={main.is_published !== false} onChange={v => update(main.id, 'is_published', v)} />
+          </div>
+
+          {groupedChildren[main.id]?.length > 0 && (
+            <div className="bg-slate-50 border border-slate-200 rounded p-3 mb-3">
+              <p className="text-xs font-semibold text-slate-600 mb-2">Sub Links</p>
+              {groupedChildren[main.id].map(sub => (
+                <div key={sub.id} className="border border-slate-200 bg-white rounded p-3 mb-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Input label="Label" value={sub.label} onChange={v => update(sub.id, 'label', v)} />
+                    <Input label="Href" value={sub.href} onChange={v => update(sub.id, 'href', v)} />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <Input label="Sort" type="number" value={sub.sort_order} onChange={v => update(sub.id, 'sort_order', parseInt(v) || 0)} />
+                    <Toggle label="Visible" value={!!sub.is_visible} onChange={v => update(sub.id, 'is_visible', v)} />
+                    <Toggle label="Published" value={sub.is_published !== false} onChange={v => update(sub.id, 'is_published', v)} />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => save(sub)}>Save Sub Link</Button>
+                    <Button size="sm" variant="danger" onClick={() => del(sub.id)}>Delete</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <Button size="sm" onClick={() => save(main)}>Save Main Link</Button>
+        </ItemCard>
+      ))}
+
+      {mains.length === 0 && <p className="text-center text-slate-400 py-8">No nav links yet.</p>}
     </div>
   );
 }

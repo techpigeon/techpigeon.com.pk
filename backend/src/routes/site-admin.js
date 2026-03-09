@@ -8,6 +8,32 @@ const { authenticate, requireRole } = require('../middleware/middleware_v2');
 
 router.use(authenticate, requireRole('admin'));
 
+let cmsMetaReady = false;
+async function ensureCmsMetaTables() {
+  if (cmsMetaReady) return;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS site_pages (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      slug VARCHAR(80) UNIQUE NOT NULL,
+      title VARCHAR(255) NOT NULL,
+      description TEXT,
+      status VARCHAR(20) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','published','archived')),
+      show_in_homepage BOOLEAN DEFAULT false,
+      sort_order INTEGER DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await pool.query(`ALTER TABLE nav_links ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES nav_links(id) ON DELETE CASCADE`);
+  await pool.query(`ALTER TABLE nav_links ADD COLUMN IF NOT EXISTS link_type VARCHAR(20) NOT NULL DEFAULT 'main'`);
+  await pool.query(`ALTER TABLE nav_links ADD COLUMN IF NOT EXISTS is_published BOOLEAN DEFAULT true`);
+  await pool.query(`ALTER TABLE page_sections ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'draft'`);
+  await pool.query(`ALTER TABLE page_sections ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false`);
+  await pool.query(`ALTER TABLE page_sections ADD COLUMN IF NOT EXISTS show_on_homepage BOOLEAN DEFAULT false`);
+  await pool.query(`ALTER TABLE page_sections ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ`);
+  cmsMetaReady = true;
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // SITE SETTINGS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -73,6 +99,7 @@ router.put('/settings', async (req, res, next) => {
 
 router.get('/sections', async (req, res, next) => {
   try {
+    await ensureCmsMetaTables();
     const { page } = req.query;
     let q = 'SELECT * FROM page_sections';
     const params = [];
@@ -85,12 +112,16 @@ router.get('/sections', async (req, res, next) => {
 
 router.put('/sections/:id', async (req, res, next) => {
   try {
-    const { title, subtitle, content, data, is_visible, sort_order } = req.body;
+    await ensureCmsMetaTables();
+    const { title, subtitle, content, data, is_visible, sort_order, status, is_archived, show_on_homepage } = req.body;
     const { rows } = await pool.query(
       `UPDATE page_sections SET title=COALESCE($1,title), subtitle=COALESCE($2,subtitle),
        content=COALESCE($3,content), data=COALESCE($4,data), is_visible=COALESCE($5,is_visible),
-       sort_order=COALESCE($6,sort_order), updated_by=$7 WHERE id=$8 RETURNING *`,
-      [title, subtitle, content, data ? JSON.stringify(data) : null, is_visible, sort_order, req.user.id, req.params.id]
+       sort_order=COALESCE($6,sort_order), status=COALESCE($7,status),
+       is_archived=COALESCE($8,is_archived), show_on_homepage=COALESCE($9,show_on_homepage),
+       published_at=CASE WHEN COALESCE($7,status)='published' THEN COALESCE(published_at,NOW()) ELSE published_at END,
+       updated_by=$10 WHERE id=$11 RETURNING *`,
+      [title, subtitle, content, data ? JSON.stringify(data) : null, is_visible, sort_order, status, is_archived, show_on_homepage, req.user.id, req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Section not found.' });
     res.json({ section: rows[0] });
@@ -99,12 +130,13 @@ router.put('/sections/:id', async (req, res, next) => {
 
 router.post('/sections', async (req, res, next) => {
   try {
-    const { page, section_key, title, subtitle, content, data, is_visible, sort_order } = req.body;
+    await ensureCmsMetaTables();
+    const { page, section_key, title, subtitle, content, data, is_visible, sort_order, status, is_archived, show_on_homepage } = req.body;
     if (!page || !section_key) return res.status(400).json({ error: 'Page and section_key required.' });
     const { rows } = await pool.query(
-      `INSERT INTO page_sections(page, section_key, title, subtitle, content, data, is_visible, sort_order, updated_by)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-      [page, section_key, title, subtitle, content, data ? JSON.stringify(data) : '{}', is_visible ?? true, sort_order || 0, req.user.id]
+      `INSERT INTO page_sections(page, section_key, title, subtitle, content, data, is_visible, sort_order, status, is_archived, show_on_homepage, updated_by)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+      [page, section_key, title, subtitle, content, data ? JSON.stringify(data) : '{}', is_visible ?? true, sort_order || 0, status || 'draft', is_archived ?? false, show_on_homepage ?? false, req.user.id]
     );
     res.status(201).json({ section: rows[0] });
   } catch (e) { next(e); }
@@ -298,21 +330,100 @@ router.delete('/tlds/:id', async (req, res, next) => {
 
 router.get('/nav', async (req, res, next) => {
   try {
+    await ensureCmsMetaTables();
     const { rows } = await pool.query('SELECT * FROM nav_links ORDER BY sort_order');
     res.json({ links: rows });
   } catch (e) { next(e); }
 });
 
+router.post('/nav', async (req, res, next) => {
+  try {
+    await ensureCmsMetaTables();
+    const { label, href, position='primary', parent_id=null, link_type='main', is_visible=true, is_published=true, sort_order=0 } = req.body;
+    if (!label || !href) return res.status(400).json({ error: 'label and href are required.' });
+    const { rows } = await pool.query(
+      `INSERT INTO nav_links(label,href,position,parent_id,link_type,is_visible,is_published,sort_order)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [label, href, position, parent_id, link_type, is_visible, is_published, sort_order]
+    );
+    res.status(201).json({ link: rows[0] });
+  } catch (e) { next(e); }
+});
+
 router.put('/nav/:id', async (req, res, next) => {
   try {
-    const { label, href, position, is_visible, sort_order } = req.body;
+    await ensureCmsMetaTables();
+    const { label, href, position, parent_id, link_type, is_visible, is_published, sort_order } = req.body;
     const { rows } = await pool.query(
       `UPDATE nav_links SET label=COALESCE($1,label), href=COALESCE($2,href),
-       position=COALESCE($3,position), is_visible=COALESCE($4,is_visible),
-       sort_order=COALESCE($5,sort_order) WHERE id=$6 RETURNING *`,
-      [label, href, position, is_visible, sort_order, req.params.id]
+       position=COALESCE($3,position), parent_id=COALESCE($4,parent_id), link_type=COALESCE($5,link_type),
+       is_visible=COALESCE($6,is_visible), is_published=COALESCE($7,is_published),
+       sort_order=COALESCE($8,sort_order) WHERE id=$9 RETURNING *`,
+      [label, href, position, parent_id, link_type, is_visible, is_published, sort_order, req.params.id]
     );
     res.json({ link: rows[0] });
+  } catch (e) { next(e); }
+});
+
+router.delete('/nav/:id', async (req, res, next) => {
+  try {
+    await ensureCmsMetaTables();
+    await pool.query('DELETE FROM nav_links WHERE id=$1', [req.params.id]);
+    res.json({ message: 'Nav link deleted.' });
+  } catch (e) { next(e); }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// PAGES (blank pages + publish/archive)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+router.get('/pages', async (req, res, next) => {
+  try {
+    await ensureCmsMetaTables();
+    const { rows } = await pool.query('SELECT * FROM site_pages ORDER BY sort_order, created_at DESC');
+    res.json({ pages: rows });
+  } catch (e) { next(e); }
+});
+
+router.post('/pages', async (req, res, next) => {
+  try {
+    await ensureCmsMetaTables();
+    const { slug, title, description, status='draft', show_in_homepage=false, sort_order=0 } = req.body;
+    if (!slug || !title) return res.status(400).json({ error: 'slug and title are required.' });
+    const { rows } = await pool.query(
+      `INSERT INTO site_pages(slug,title,description,status,show_in_homepage,sort_order)
+       VALUES($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [String(slug).trim().toLowerCase(), title, description || null, status, show_in_homepage, sort_order]
+    );
+    res.status(201).json({ page: rows[0] });
+  } catch (e) { next(e); }
+});
+
+router.patch('/pages/:id', async (req, res, next) => {
+  try {
+    await ensureCmsMetaTables();
+    const { slug, title, description, status, show_in_homepage, sort_order } = req.body;
+    const { rows } = await pool.query(
+      `UPDATE site_pages SET slug=COALESCE($1,slug), title=COALESCE($2,title),
+       description=COALESCE($3,description), status=COALESCE($4,status),
+       show_in_homepage=COALESCE($5,show_in_homepage), sort_order=COALESCE($6,sort_order),
+       updated_at=NOW() WHERE id=$7 RETURNING *`,
+      [slug ? String(slug).trim().toLowerCase() : null, title, description, status, show_in_homepage, sort_order, req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Page not found.' });
+    res.json({ page: rows[0] });
+  } catch (e) { next(e); }
+});
+
+router.delete('/pages/:id', async (req, res, next) => {
+  try {
+    await ensureCmsMetaTables();
+    const { rows } = await pool.query('SELECT slug FROM site_pages WHERE id=$1', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Page not found.' });
+    const slug = rows[0].slug;
+    await pool.query('DELETE FROM page_sections WHERE page=$1', [slug]);
+    await pool.query('DELETE FROM site_pages WHERE id=$1', [req.params.id]);
+    res.json({ message: 'Page and related sections deleted.' });
   } catch (e) { next(e); }
 });
 
