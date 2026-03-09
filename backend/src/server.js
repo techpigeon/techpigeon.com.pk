@@ -15,11 +15,35 @@ const allowedOrigins = [
   process.env.FRONTEND_PREVIEW_URL,
 ].filter(Boolean);
 
+const normalizeOrigin = (value) => {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return String(value || '').replace(/\/$/, '');
+  }
+};
+
+const allowedOriginSet = new Set(allowedOrigins.map(normalizeOrigin));
+
+const isTrustedOrigin = (origin) => {
+  const normalized = normalizeOrigin(origin);
+  if (allowedOriginSet.has(normalized)) return true;
+  try {
+    const { hostname, protocol } = new URL(normalized);
+    if (protocol !== 'https:') return false;
+    if (hostname === 'techpigeon.com.pk' || hostname === 'www.techpigeon.com.pk') return true;
+    if (hostname.endsWith('.vercel.app')) return true;
+  } catch {
+    return false;
+  }
+  return false;
+};
+
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
     if (!allowedOrigins.length) return cb(null, true);
-    return allowedOrigins.includes(origin)
+    return isTrustedOrigin(origin)
       ? cb(null, true)
       : cb(new Error('CORS blocked: origin not allowed'));
   },
