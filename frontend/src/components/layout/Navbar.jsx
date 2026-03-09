@@ -7,6 +7,16 @@ import Button from '../ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import { useNavLinks } from '../../lib/useContent';
 
+const DEFAULT_LINKS = [
+  { label: 'Home', href: '/', position: 'primary' },
+  { label: 'Solutions', href: '/#services', position: 'primary' },
+  { label: 'Domains', href: '/domains', position: 'primary' },
+  { label: 'Cloud Hosting', href: '/hosting', position: 'primary' },
+  { label: 'Training', href: '/training', position: 'primary' },
+  { label: 'About', href: '/about', position: 'secondary' },
+  { label: 'Contact', href: '/contact', position: 'secondary' },
+];
+
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -14,8 +24,9 @@ export default function Navbar() {
   const { links } = useNavLinks();
   const [open, setOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const primaryLinks = links.filter((l) => l.position === 'primary');
-  const secondaryLinks = links.filter((l) => l.position === 'secondary');
+  const navLinks = links?.length ? links : DEFAULT_LINKS;
+  const primaryLinks = navLinks.filter((l) => l.position === 'primary');
+  const secondaryLinks = navLinks.filter((l) => l.position === 'secondary');
 
   const isActive = (href) =>
     href === '/'
