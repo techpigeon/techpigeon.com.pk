@@ -47,9 +47,10 @@ router.post('/:id/enroll', authenticate, async (req, res, next) => {
     if (!course) return res.status(404).json({ error: 'Course not found' });
     const { rows: [exists] } = await pool.query('SELECT id FROM enrollments WHERE user_id=$1 AND course_id=$2', [req.user.id, course.id]);
     if (exists) return res.status(400).json({ error: 'Already enrolled' });
+    const orderNo = 'TP-' + Date.now().toString().slice(-8);
     const { rows: [order] } = await pool.query(
-      'INSERT INTO orders (user_id, status, subtotal_pkr, total_pkr) VALUES ($1,$2,$3,$3) RETURNING *',
-      [req.user.id, 'pending', course.price_pkr]
+      'INSERT INTO orders (user_id, order_number, status, subtotal_pkr, total_pkr) VALUES ($1,$2,$3,$4,$4) RETURNING *',
+      [req.user.id, orderNo, 'pending', course.price_pkr]
     );
     await pool.query(
       `INSERT INTO order_items (order_id, item_type, item_id, description, quantity, unit_price, total_price)

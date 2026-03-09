@@ -141,12 +141,32 @@ router.post('/easypaisa/callback', async (req, res, next) => {
 // ── MANUAL BANK TRANSFER ─────────────────────────────────────
 router.post('/bank/initiate', authenticate, async (req, res, next) => {
   try {
-    const { order_id, bank_name, transaction_ref } = req.body;
+    const { order_id, bank_name, transaction_ref, screenshot_base64, screenshot_name } = req.body;
     const { rows } = await pool.query('SELECT * FROM orders WHERE id=$1 AND user_id=$2', [order_id, req.user.id]);
     if (!rows.length) return res.status(404).json({ error: 'Order not found.' });
+    if (!transaction_ref) return res.status(400).json({ error: 'Transaction reference is required.' });
     await pool.query(`INSERT INTO payments(order_id,user_id,method,amount_pkr,status,transaction_id,gateway_response) VALUES($1,$2,'bank_transfer',$3,'pending',$4,$5)`,
-      [order_id, req.user.id, rows[0].total_pkr, transaction_ref, JSON.stringify({ bank_name, transaction_ref })]);
-    res.json({ message: 'Bank transfer recorded. Admin will verify within 24 hours.', bank_details: { name: 'TechPigeon (TSN Pakistan)', account: '0123456789', bank: 'HBL', iban: 'PK00HABB0000000123456789' } });
+      [
+        order_id,
+        req.user.id,
+        rows[0].total_pkr,
+        transaction_ref,
+        JSON.stringify({
+          bank_name,
+          transaction_ref,
+          screenshot_base64: screenshot_base64 || null,
+          screenshot_name: screenshot_name || null,
+        }),
+      ]
+    );
+    res.json({
+      message: 'Bank transfer recorded. Admin will verify within 24 hours.',
+      bank_details: {
+        title: 'TECHPIGEON',
+        iban: 'PK95MEZN0034010105015073',
+        swift_code: 'MEZNPKKA',
+      },
+    });
   } catch(e) { next(e); }
 });
 
@@ -156,7 +176,7 @@ router.post('/admin/confirm/:payment_id', authenticate, requireRole('admin','sup
   try {
     const { rows } = await pool.query('SELECT * FROM payments WHERE id=$1', [req.params.payment_id]);
     if (!rows.length) return res.status(404).json({ error: 'Payment not found.' });
-    await pool.query('UPDATE payments SET status=$1,confirmed_at=NOW(),confirmed_by=$2 WHERE id=$3', ['completed', req.user.id, req.params.payment_id]);
+    await pool.query('UPDATE payments SET status=$1,confirmed_at=NOW() WHERE id=$2', ['completed', req.params.payment_id]);
     await pool.query('UPDATE orders SET status=$1,paid_at=NOW() WHERE id=$2', ['paid', rows[0].order_id]);
     await activateOrderItems(rows[0].order_id);
     res.json({ message: 'Payment confirmed and services activated.' });

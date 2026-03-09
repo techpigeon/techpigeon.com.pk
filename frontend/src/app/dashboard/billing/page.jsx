@@ -53,6 +53,8 @@ function PayModal({ order, open, onClose, onPaid }) {
   const [mobile, setMobile] = useState('');
   const [bankName, setBankName] = useState('HBL');
   const [txnRef, setTxnRef] = useState('');
+  const [screenshot, setScreenshot] = useState(null);
+  const [screenshotName, setScreenshotName] = useState('');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
 
@@ -82,7 +84,7 @@ function PayModal({ order, open, onClose, onPaid }) {
 
       if (method === 'bank_transfer') {
         if (!txnRef) throw new Error('Transaction reference is required.');
-        const { data } = await paymentsApi.bank(order.id, bankName, txnRef);
+        const { data } = await paymentsApi.bank(order.id, bankName, txnRef, screenshot, screenshotName);
         onPaid(`Bank transfer submitted. ${data?.message || ''}`);
         onClose();
         return;
@@ -124,6 +126,11 @@ function PayModal({ order, open, onClose, onPaid }) {
 
         {method === 'bank_transfer' && (
           <>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+              <p><b>Title:</b> TECHPIGEON</p>
+              <p><b>IBAN:</b> PK95MEZN0034010105015073</p>
+              <p><b>SWIFT CODE:</b> MEZNPKKA</p>
+            </div>
             <div>
               <label className="block text-xs font-semibold text-slate-500 mb-1">Bank Name</label>
               <input value={bankName} onChange={(e) => setBankName(e.target.value)} className="w-full px-3 py-2.5 border-2 border-slate-200 rounded text-sm" />
@@ -131,6 +138,26 @@ function PayModal({ order, open, onClose, onPaid }) {
             <div>
               <label className="block text-xs font-semibold text-slate-500 mb-1">Transaction Reference</label>
               <input value={txnRef} onChange={(e) => setTxnRef(e.target.value)} placeholder="TRX-123456" className="w-full px-3 py-2.5 border-2 border-slate-200 rounded text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1">Payment Screenshot (optional)</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) {
+                    setScreenshot(null);
+                    setScreenshotName('');
+                    return;
+                  }
+                  setScreenshotName(file.name);
+                  const reader = new FileReader();
+                  reader.onload = () => setScreenshot(reader.result);
+                  reader.readAsDataURL(file);
+                }}
+                className="w-full px-3 py-2 border-2 border-slate-200 rounded text-sm bg-white"
+              />
             </div>
           </>
         )}

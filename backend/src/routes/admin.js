@@ -197,13 +197,21 @@ router.patch('/orders/:id/status', async (req, res, next) => {
 // ── PAYMENTS ─────────────────────────────────────────────────
 router.get('/payments', async (req, res, next) => {
   try {
-    const { page=1, limit=20, status, method } = req.query;
-    const offset = (page-1)*limit;
+    const { page = 1, limit = 20, status, method, q } = req.query;
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const limitNum = Math.max(parseInt(limit, 10) || 20, 1);
+    const offset = (pageNum - 1) * limitNum;
     let where = ['1=1']; const params=[]; let i=1;
     if (status) { where.push(`p.status=$${i++}`); params.push(status); }
     if (method) { where.push(`p.method=$${i++}`); params.push(method); }
-    const { rows } = await pool.query(`SELECT p.*,u.email,u.first_name,u.last_name,o.order_number FROM payments p JOIN users u ON p.user_id=u.id JOIN orders o ON p.order_id=o.id WHERE ${where.join(' AND ')} ORDER BY p.created_at DESC LIMIT $${i} OFFSET $${i+1}`, [...params,limit,offset]);
-    res.json({ payments: rows });
+    if (q) {
+      where.push(`(p.transaction_id ILIKE $${i} OR p.gateway_ref ILIKE $${i} OR o.order_number ILIKE $${i} OR u.email ILIKE $${i} OR u.first_name ILIKE $${i} OR u.last_name ILIKE $${i})`);
+      params.push(`%${q}%`);
+      i++;
+    }
+    const total = await pool.query(`SELECT COUNT(*) FROM payments p JOIN users u ON p.user_id=u.id JOIN orders o ON p.order_id=o.id WHERE ${where.join(' AND ')}`, params);
+    const { rows } = await pool.query(`SELECT p.*,u.email,u.first_name,u.last_name,o.order_number FROM payments p JOIN users u ON p.user_id=u.id JOIN orders o ON p.order_id=o.id WHERE ${where.join(' AND ')} ORDER BY p.created_at DESC LIMIT $${i} OFFSET $${i+1}`, [...params, limitNum, offset]);
+    res.json({ payments: rows, total: parseInt(total.rows[0].count, 10) });
   } catch(e) { next(e); }
 });
 

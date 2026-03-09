@@ -53,7 +53,7 @@ export const ordersApi = {
 export const paymentsApi = {
   jazzcash:  (orderId: string, mobile: string)                 => api.post('/payments/jazzcash/initiate',  { order_id: orderId, mobile_number: mobile }),
   easypaisa: (orderId: string, mobile: string)                 => api.post('/payments/easypaisa/initiate', { order_id: orderId, mobile_number: mobile }),
-  bank:      (orderId: string, bank: string, ref: string)      => api.post('/payments/bank/initiate',      { order_id: orderId, bank_name: bank, transaction_ref: ref }),
+  bank:      (orderId: string, bank: string, ref: string, screenshot?: any, screenshotName?: string)      => api.post('/payments/bank/initiate',      { order_id: orderId, bank_name: bank, transaction_ref: ref, screenshot_base64: screenshot || null, screenshot_name: screenshotName || null }),
   stripe:    (orderId: string)                                 => api.post('/payments/stripe/create-intent',{ order_id: orderId }),
 };
 export const dashboardApi = {
