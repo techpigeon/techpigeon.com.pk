@@ -13,9 +13,9 @@ export default function Logo({
 }) {
   const { s } = useSite();
   const dim = {
-    sm: { w: 40, f: '1.05rem' },
-    md: { w: 52, f: '1.4rem' },
-    lg: { w: 64, f: '1.75rem' }
+    sm: { w: 120, h: 28, f: '1.05rem' },
+    md: { w: 170, h: 40, f: '1.4rem' },
+    lg: { w: 220, h: 52, f: '1.75rem' }
   }[size];
 
   const textColor   = variant === 'white' ? '#ffffff' : '#1d1d1d';
@@ -24,17 +24,16 @@ export default function Logo({
   const logoUrl = s('logo_url');
   const hasLogo = logoUrl && logoUrl.trim() !== ''; // Show logo if URL is provided and not empty
 
-  const mark = (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: hasLogo ? 12 : 0, textDecoration: 'none' }}>
-      {hasLogo && (
-        <img
-          src={logoUrl}
-          width={dim.w}
-          height={dim.w}
-          alt={s('site_name', 'TechPigeon')}
-          style={{ objectFit: 'contain' }}
-        />
-      )}
+  const mark = hasLogo ? (
+    <span style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+      <img
+        src={logoUrl}
+        alt={s('site_name', 'TechPigeon')}
+        style={{ width: dim.w, height: dim.h, objectFit: 'contain', objectPosition: 'left center' }}
+      />
+    </span>
+  ) : (
+    <span style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
       <span
         style={{
           fontFamily: 'var(--font-heading, Aleo, serif)',
